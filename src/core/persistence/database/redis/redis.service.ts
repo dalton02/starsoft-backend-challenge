@@ -44,7 +44,6 @@ class RedisCache<P> {
   redis: Redis;
   expiration: number;
   prefix: string;
-  globalPrefix: string;
   logger: Logger;
   constructor(
     redis: Redis,
@@ -56,8 +55,11 @@ class RedisCache<P> {
     this.redis = redis;
     this.expiration = expiration;
     this.prefix = prefix;
-    this.globalPrefix = globalPrefix;
     this.logger = logger;
+
+    if (globalPrefix) {
+      this.prefix = globalPrefix + '-';
+    }
   }
 
   async set(key: string, value: P): Promise<[string | null, string | null]> {
