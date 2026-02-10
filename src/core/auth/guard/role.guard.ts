@@ -9,6 +9,7 @@ import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
 import { AuthModel } from '../auth.model';
 import { AppErrorUnauthorized } from 'src/utils/errors/app-errors';
+import { UserRole } from '../enum/role.enum';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -24,10 +25,10 @@ export class RolesGuard implements CanActivate {
       throw new UnauthorizedException('Usuário não autenticado');
     }
 
-    const rolesAllowed = this.reflector.getAllAndOverride<AuthModel.Role[]>(
-      'roles',
-      [context.getHandler(), context.getClass()],
-    );
+    const rolesAllowed = this.reflector.getAllAndOverride<UserRole[]>('roles', [
+      context.getHandler(),
+      context.getClass(),
+    ]);
 
     if (!rolesAllowed.includes(user.role)) {
       throw new AppErrorUnauthorized(
@@ -39,5 +40,4 @@ export class RolesGuard implements CanActivate {
   }
 }
 
-export const Roles = (...roles: AuthModel.Role[]) =>
-  SetMetadata('roles', roles);
+export const Roles = (...roles: UserRole[]) => SetMetadata('roles', roles);

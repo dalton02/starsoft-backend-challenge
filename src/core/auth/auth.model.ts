@@ -6,6 +6,7 @@ import {
   IsString,
   IsStrongPassword,
 } from 'class-validator';
+import { UserRole } from './enum/role.enum';
 
 export namespace AuthModel {
   class Password {
@@ -22,21 +23,16 @@ export namespace AuthModel {
     email: string;
   }
 
-  export enum Role {
-    Manager = 'Manager',
-    Customer = 'Customer',
-  }
-
   export class CreateUser extends IntersectionType(Password, Email) {
     @ApiProperty({ description: '' })
     @IsNotEmpty()
     @IsString()
     name: string;
 
-    @ApiProperty({ enum: Role })
+    @ApiProperty({ enum: UserRole })
     @IsNotEmpty()
-    @IsEnum(Role)
-    role: Role;
+    @IsEnum(UserRole)
+    role: UserRole;
   }
 
   export class Login extends IntersectionType(Password, Email) {}
@@ -47,7 +43,7 @@ export namespace AuthModel {
 
   export class UserRequest {
     id: string;
-    role: Role;
+    role: UserRole;
   }
 
   export class AuthResponse {
