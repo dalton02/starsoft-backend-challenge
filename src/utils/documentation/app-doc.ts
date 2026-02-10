@@ -54,7 +54,7 @@ export class AppDoc {
         hideDownloadButton: true,
         customCss,
         metaData: {
-          title: 'Aprovei API',
+          title: 'Starsoft Challenge',
           description: 'Documentação da API Aprovei',
         },
       }),
