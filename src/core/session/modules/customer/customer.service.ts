@@ -169,6 +169,7 @@ export class CustomerSessionService {
 
   async listHistory(
     params: CustomerModel.Request.ListReservationsQuery,
+    userId: string,
   ): Promise<ReservationModel.ListReservations> {
     const { limit, page, status } = params;
 
@@ -176,7 +177,8 @@ export class CustomerSessionService {
       .getRepository(Reservation)
       .createQueryBuilder('reservation')
       .innerJoinAndSelect('reservation.seat', 'seat')
-      .innerJoinAndSelect('seat.session', 'session');
+      .innerJoinAndSelect('seat.session', 'session')
+      .where('reservation."userId" = :userId', { userId });
 
     if (status) {
       queryBuilder.where('reservation.status = :status', { status });

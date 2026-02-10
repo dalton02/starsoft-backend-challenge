@@ -38,7 +38,7 @@ export namespace CustomerModel {
       @ApiProperty({ enum: PaymentStatus, example: PaymentStatus.APPROVED })
       @IsOptional()
       @IsEnum(PaymentStatus)
-      status: PaymentStatus;
+      status?: PaymentStatus;
     }
   }
 
