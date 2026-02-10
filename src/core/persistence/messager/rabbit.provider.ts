@@ -7,7 +7,6 @@ import { RabbitEvent, RabbitQueue } from 'src/utils/types/rabbit';
 @Injectable()
 export class RabbitProvider {
   channel: Channel;
-  private readonly MAX_PAYMENT_TIMEOUT_SECONDS = 30;
 
   async onModuleInit() {
     const conn = await amqp.connect(niceEnv.RABBIT_URL);

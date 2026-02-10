@@ -3,17 +3,21 @@ import { DataSource } from 'typeorm';
 import { ManagerSessionModel } from './manager.model';
 import { Session } from '../../entities/session.entity';
 import { Seat } from '../../entities/seat.entity';
+import { MemorySessionService } from '../memory/memory-session.service';
 
 @Injectable()
 export class ManagerSessionService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly memory: MemorySessionService,
+    private readonly dataSource: DataSource,
+  ) {}
 
   async create(
     body: ManagerSessionModel.CreateSession,
   ): Promise<ManagerSessionModel.ResponseSession> {
     const { duration, movie, placements, price, showtime, room } = body;
 
-    return await this.dataSource.transaction(async (entityManager) => {
+    const data = await this.dataSource.transaction(async (entityManager) => {
       const session = entityManager.create(Session, {
         duration,
         room,
@@ -36,5 +40,8 @@ export class ManagerSessionService {
         placements,
       };
     });
+    await this.memory.hydrateSession(data);
+
+    return data;
   }
 }

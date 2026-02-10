@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   Param,
   Post,
   Put,
@@ -14,7 +15,8 @@ import { Roles, RolesGuard } from 'src/core/auth/guard/role.guard';
 import { Doc } from 'src/utils/documentation/doc';
 import { CustomerSessionService } from './customer.service';
 import { UserId } from 'src/utils/decorators/user-id.decorator';
-import { CustomerSessionModel } from './customer.model';
+import { CustomerModel } from './customer.model';
+import { SessionModel } from '../../dto/session.model';
 
 @Controller('customer-session/')
 @ApiTags('Session/Customer')
@@ -25,14 +27,25 @@ export class CustomerSessionController {
 
   @Doc({
     name: 'List sessions',
-    response: CustomerSessionModel.ResponseListSession,
+    response: SessionModel.ListSessions,
   })
   @Post('/list')
-  async listSessions(@Query() query: CustomerSessionModel.ListSessionsQuery) {
+  async listSessions(@Query() query: CustomerModel.Request.ListSessionsQuery) {
     return await this.service.listSessions(query);
   }
+
+  @Doc({
+    name: 'Get session',
+    response: CustomerModel.Request.GetSession,
+  })
+  @Get('/session/:sessionId')
+  async getSession(@Param('sessionId') sessionId: string) {
+    return await this.service.getSession({ sessionId });
+  }
+
   @Doc({
     name: 'Book Seat',
+    response: CustomerModel.Response.Booking,
   })
   @Post('/book/:seatId')
   async bookSeat(@Param('seatId') seatId: string, @UserId() userId: string) {
@@ -46,8 +59,7 @@ export class CustomerSessionController {
   async pay(
     @Param('reservationId') reservationId: string,
     @UserId() userId: string,
-    @Body() body: CustomerSessionModel.BodyPayment,
   ) {
-    return await this.service.makePayment({ ...body, userId, reservationId });
+    return await this.service.makePayment({ userId, reservationId });
   }
 }

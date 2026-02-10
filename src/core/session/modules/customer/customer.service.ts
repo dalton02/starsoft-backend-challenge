@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { CustomerSessionModel } from './customer.model';
+import { CustomerModel } from './customer.model';
 import { Seat } from '../../entities/seat.entity';
 import { SeatStatus } from '../../enums/seat.enum';
 import {
@@ -12,64 +12,72 @@ import { Session } from '../../entities/session.entity';
 import { PaginatedResponseFactory } from 'src/utils/types/default.pagination';
 import { addSeconds } from 'date-fns';
 import { ClientKafka, ClientProxy } from '@nestjs/microservices';
-import {
-  RabbitQueue,
-  type EventReservationCreated,
-} from 'src/utils/types/rabbit';
+import { RabbitQueue, type EventReservation } from 'src/utils/types/rabbit';
 import { type Channel } from 'amqplib';
 import { RabbitProvider } from 'src/core/persistence/messager/rabbit.provider';
 import { groupCaches } from 'src/utils/functions/cache';
 import { RedisService } from 'src/core/persistence/database/redis/redis.service';
 import { PaymentStatus } from '../../enums/payment.enum';
+import { SessionModel } from '../../dto/session.model';
+import { MemorySessionService } from '../memory/memory-session.service';
 @Injectable()
 export class CustomerSessionService {
-  private CACHE_PAYMENT: ReturnType<typeof groupCaches>['reservation'];
-
   constructor(
-    private readonly redis: RedisService,
     private readonly dataSource: DataSource,
     private readonly rabbit: RabbitProvider,
-  ) {
-    this.CACHE_PAYMENT = groupCaches(redis).reservation;
-  }
+    private readonly memory: MemorySessionService,
+  ) {}
 
-  async makePayment(params: CustomerSessionModel.ConfirmPayment) {
-    const { paymentKey, reservationId, userId } = params;
-    return await this.dataSource.transaction(async (entityManager) => {
-      const reservation = await entityManager
-        .getRepository(Reservation)
-        .createQueryBuilder('reservation')
-        .setLock('pessimistic_write')
-        .innerJoinAndSelect('reservation.seat', 'seat')
-        .where('reservation.id = :reservationId', { reservationId })
-        .getOne();
+  async makePayment(params: CustomerModel.Request.ConfirmPayment) {
+    const { reservationId, userId } = params;
+    const { reservation, seat, session } = await this.dataSource.transaction(
+      async (entityManager) => {
+        const reservation = await entityManager
+          .getRepository(Reservation)
+          .createQueryBuilder('reservation')
+          .setLock('pessimistic_write')
+          .innerJoinAndSelect('reservation.seat', 'seat')
+          .innerJoinAndSelect('seat.session', 'session')
+          .where('reservation.id = :reservationId', { reservationId })
+          .getOne();
 
-      if (!reservation) {
-        throw new AppErrorNotFound('Reserva não foi encontrada');
-      }
+        if (!reservation) {
+          throw new AppErrorNotFound('Reserva não foi encontrada');
+        }
 
-      if (reservation.status != PaymentStatus.PENDING) {
-        throw new AppErrorBadRequest('Reserva não está mais pendente');
-      }
+        if (reservation.status != PaymentStatus.PENDING) {
+          throw new AppErrorBadRequest('Reserva não está mais pendente');
+        }
 
-      const paymentInfo = await this.CACHE_PAYMENT.get(reservationId);
-
-      if (paymentInfo.paymentKey !== paymentKey) {
-        throw new AppErrorBadRequest('Chave de pagamento incorreta');
-      }
-
-      reservation.status = PaymentStatus.APPROVED;
-      reservation.seat.status = SeatStatus.RESERVED;
-      await entityManager.save([reservation, reservation.seat]);
+        reservation.status = PaymentStatus.APPROVED;
+        reservation.seat.status = SeatStatus.RESERVED;
+        await entityManager.save([reservation, reservation.seat]);
+        return {
+          reservation,
+          seat: reservation.seat,
+          session: reservation.seat.session,
+        };
+      },
+    );
+    await this.rabbit.publish(RabbitQueue.RESERVATION_CONFIRMED, {
+      reservationId,
+      seatId: seat.id,
+      sessionId: session.id,
     });
   }
 
-  async bookSeat(body: CustomerSessionModel.BookSeatRequest) {
+  async bookSeat(
+    body: CustomerModel.Request.BookSeat,
+  ): Promise<CustomerModel.Response.Booking> {
     const { seatId, userId } = body;
 
     return await this.dataSource.transaction(async (entityManager) => {
       const seat = await entityManager.findOne(Seat, {
         where: { id: seatId },
+        relations: {
+          session: true,
+        },
+        relationLoadStrategy: 'query',
         lock: { mode: 'pessimistic_write' },
       });
 
@@ -90,18 +98,51 @@ export class CustomerSessionService {
 
       await entityManager.save([reservation, seat]);
 
-      const payload: EventReservationCreated = {
+      const payload: EventReservation = {
         seatId,
         reservationId: reservation.id,
+        sessionId: seat.session.id,
       };
 
       this.rabbit.publish(RabbitQueue.RESERVATION_CREATED, payload);
+
+      return {
+        bookId: reservation.id,
+        expiresAt: addSeconds(
+          new Date(),
+          SessionModel.MAX_PAYMENT_TIMEOUT_SECONDS,
+        ),
+      };
     });
   }
 
+  async getSession(
+    params: CustomerModel.Request.GetSession,
+  ): Promise<SessionModel.Session> {
+    const { sessionId } = params;
+
+    const sessionCached = await this.memory.getSession(sessionId);
+    if (sessionCached) return sessionCached;
+
+    const session = await this.dataSource.getRepository(Session).findOne({
+      where: {
+        id: sessionId,
+      },
+      relations: { seats: true },
+    });
+
+    if (!session) {
+      throw new AppErrorNotFound('Sessão não encontrada');
+    }
+
+    this.memory.hydrateSession(session);
+
+    return session;
+  }
+
   async listSessions(
-    params: CustomerSessionModel.ListSessionsQuery,
-  ): Promise<CustomerSessionModel.ResponseListSession> {
+    params: CustomerModel.Request.ListSessionsQuery,
+  ): Promise<SessionModel.ListSessions> {
     const { limit, page } = params;
 
     const [sessions, total] = await Promise.all([
