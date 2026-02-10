@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
   IsArray,
   IsDate,
@@ -24,6 +25,7 @@ export namespace ManagerSessionModel {
     @IsArray()
     @IsString({ each: true })
     @IsNotEmpty({ each: true })
+    @Transform((d) => Array.from(new Set(d.value)))
     placements: string[];
 
     @ApiProperty({ description: 'In cents' })

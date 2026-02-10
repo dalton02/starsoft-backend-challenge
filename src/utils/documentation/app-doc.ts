@@ -39,7 +39,7 @@ export class AppDoc {
       '/docs',
       apiReference({
         layout: 'modern',
-        theme: 'purple',
+        theme: 'mars',
         url: '/openapi.json',
         darkMode: true,
         hideModels: true,
@@ -47,7 +47,7 @@ export class AppDoc {
         customCss,
         metaData: {
           title: 'Starsoft Challenge',
-          description: 'Documentação da API Aprovei',
+          description: 'Documentação da API',
         },
       }),
     );
