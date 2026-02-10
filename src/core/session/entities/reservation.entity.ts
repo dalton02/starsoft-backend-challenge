@@ -6,6 +6,7 @@ import {
   Entity,
   ManyToOne,
   PrimaryColumn,
+  type Relation,
 } from 'typeorm';
 import { Seat } from './seat.entity';
 
@@ -14,11 +15,11 @@ export class Reservation {
   @PrimaryColumn()
   id: string = createId();
 
-  @ManyToOne(() => User, (user) => user.reservations)
-  user: User;
+  @ManyToOne(() => User, (user) => user.reservations, { onDelete: 'CASCADE' })
+  user: Relation<User>;
 
-  @ManyToOne(() => Seat, (seat) => seat.reservations)
-  seat: Seat;
+  @ManyToOne(() => Seat, (seat) => seat.reservations, { onDelete: 'CASCADE' })
+  seat: Relation<Seat>;
 
   @CreateDateColumn()
   createdAt: Date;

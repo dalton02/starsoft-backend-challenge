@@ -1,7 +1,7 @@
 import { User } from 'src/core/auth/entities/user.entity';
-import { Reservation } from 'src/core/ticket/entities/reservation.entity';
-import { Seat } from 'src/core/ticket/entities/seat.entity';
-import { Session } from 'src/core/ticket/entities/session.entity';
+import { Reservation } from 'src/core/session/entities/reservation.entity';
+import { Seat } from 'src/core/session/entities/seat.entity';
+import { Session } from 'src/core/session/entities/session.entity';
 import { niceEnv } from 'src/utils/functions/env';
 import { DataSource, DataSourceOptions } from 'typeorm';
 

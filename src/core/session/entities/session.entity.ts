@@ -1,5 +1,13 @@
 import { createId } from '@paralleldrive/cuid2';
-import { Column, Entity, ManyToOne, PrimaryColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  PrimaryColumn,
+  type Relation,
+} from 'typeorm';
 import { Seat } from './seat.entity';
 
 @Entity()
@@ -16,12 +24,12 @@ export class Session {
   @Column()
   price: number;
 
-  @Column({ type: Date })
+  @Column({ type: 'timestamp' })
   showtime: Date;
 
   @Column()
   duration: number;
 
-  @ManyToOne((type) => Seat, (seat) => seat.session)
-  seats: Seat[];
+  @OneToMany((type) => Seat, (seat) => seat.session)
+  seats: Relation<Seat[]>;
 }
