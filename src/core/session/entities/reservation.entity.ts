@@ -9,6 +9,7 @@ import {
   type Relation,
 } from 'typeorm';
 import { Seat } from './seat.entity';
+import { PaymentStatus } from '../enums/payment.enum';
 
 @Entity()
 export class Reservation {
@@ -24,6 +25,6 @@ export class Reservation {
   @CreateDateColumn()
   createdAt: Date;
 
-  @Column({ type: 'timestamp' })
-  expiresAt: Date;
+  @Column({ type: 'enum', enum: PaymentStatus, default: PaymentStatus.PENDING })
+  status: PaymentStatus;
 }

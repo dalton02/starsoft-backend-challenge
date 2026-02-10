@@ -8,4 +8,5 @@ export const niceEnv = cleanEnv(process.env, {
   TEST_DATABASE_URL: str(),
   TOKEN_DURATION: num(),
   JWT_SECRET: str(),
+  RABBIT_URL: str(),
 });
