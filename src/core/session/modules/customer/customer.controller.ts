@@ -17,6 +17,7 @@ import { CustomerSessionService } from './customer.service';
 import { UserId } from 'src/utils/decorators/user-id.decorator';
 import { CustomerModel } from './customer.model';
 import { SessionModel } from '../../dto/session.model';
+import { ReservationModel } from '../../dto/reservation.model';
 
 @Controller('customer-session/')
 @ApiTags('Session/Customer')
@@ -26,10 +27,21 @@ export class CustomerSessionController {
   constructor(private readonly service: CustomerSessionService) {}
 
   @Doc({
+    name: 'List reservations history',
+    response: ReservationModel.ListReservations,
+  })
+  @Get('/list-history')
+  async listHistory(
+    @Query() query: CustomerModel.Request.ListReservationsQuery,
+  ) {
+    return await this.service.listHistory(query);
+  }
+
+  @Doc({
     name: 'List sessions',
     response: SessionModel.ListSessions,
   })
-  @Post('/list')
+  @Get('/list-sessions')
   async listSessions(@Query() query: CustomerModel.Request.ListSessionsQuery) {
     return await this.service.listSessions(query);
   }

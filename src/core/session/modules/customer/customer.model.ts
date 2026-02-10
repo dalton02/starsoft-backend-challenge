@@ -1,10 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import {
   PaginatedResponseFactory,
   PaginationDto,
 } from 'src/utils/types/default.pagination';
 import { SeatStatus } from '../../enums/seat.enum';
+import { PaymentStatus } from '../../enums/payment.enum';
 
 export namespace CustomerModel {
   export namespace Request {
@@ -32,6 +33,13 @@ export namespace CustomerModel {
     }
 
     export class ListSessionsQuery extends PaginationDto {}
+
+    export class ListReservationsQuery extends PaginationDto {
+      @ApiProperty({ enum: PaymentStatus, example: PaymentStatus.APPROVED })
+      @IsOptional()
+      @IsEnum(PaymentStatus)
+      status: PaymentStatus;
+    }
   }
 
   export namespace Response {

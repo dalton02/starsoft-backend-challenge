@@ -25,6 +25,12 @@ export class Reservation {
   @CreateDateColumn()
   createdAt: Date;
 
+  @Column({ nullable: true, type: 'timestamp' })
+  payedAt: Date;
+
+  @Column({ type: 'timestamp' })
+  expiresAt: Date;
+
   @Column({ type: 'enum', enum: PaymentStatus, default: PaymentStatus.PENDING })
   status: PaymentStatus;
 }

@@ -1,5 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import {
+  DataSource,
+  FindOneOptions,
+  FindOptions,
+  FindOptionsWhere,
+} from 'typeorm';
 import { CustomerModel } from './customer.model';
 import { Seat } from '../../entities/seat.entity';
 import { SeatStatus } from '../../enums/seat.enum';
@@ -20,6 +25,7 @@ import { RedisService } from 'src/core/persistence/database/redis/redis.service'
 import { PaymentStatus } from '../../enums/payment.enum';
 import { SessionModel } from '../../dto/session.model';
 import { MemorySessionService } from '../memory/memory-session.service';
+import { ReservationModel } from '../../dto/reservation.model';
 @Injectable()
 export class CustomerSessionService {
   constructor(
@@ -50,6 +56,7 @@ export class CustomerSessionService {
         }
 
         reservation.status = PaymentStatus.APPROVED;
+        reservation.payedAt = new Date();
         reservation.seat.status = SeatStatus.RESERVED;
         await entityManager.save([reservation, reservation.seat]);
         return {
@@ -94,6 +101,10 @@ export class CustomerSessionService {
       const reservation = entityManager.create(Reservation, {
         user: { id: userId },
         seat: { id: seatId },
+        expiresAt: addSeconds(
+          new Date(),
+          SessionModel.MAX_PAYMENT_TIMEOUT_SECONDS,
+        ),
       });
 
       await entityManager.save([reservation, seat]);
@@ -108,10 +119,7 @@ export class CustomerSessionService {
 
       return {
         bookId: reservation.id,
-        expiresAt: addSeconds(
-          new Date(),
-          SessionModel.MAX_PAYMENT_TIMEOUT_SECONDS,
-        ),
+        expiresAt: reservation.expiresAt,
       };
     });
   }
@@ -147,7 +155,9 @@ export class CustomerSessionService {
 
     const [sessions, total] = await Promise.all([
       this.dataSource.getRepository(Session).find({
-        relations: { seats: true },
+        relations: {
+          seats: true,
+        },
         skip: (page - 1) * limit,
         take: limit,
       }),
@@ -155,5 +165,40 @@ export class CustomerSessionService {
     ]);
 
     return new PaginatedResponseFactory({ data: sessions, limit, page, total });
+  }
+
+  async listHistory(
+    params: CustomerModel.Request.ListReservationsQuery,
+  ): Promise<ReservationModel.ListReservations> {
+    const { limit, page, status } = params;
+
+    const queryBuilder = this.dataSource
+      .getRepository(Reservation)
+      .createQueryBuilder('reservation')
+      .innerJoinAndSelect('reservation.seat', 'seat')
+      .innerJoinAndSelect('seat.session', 'session');
+
+    if (status) {
+      queryBuilder.where('reservation.status = :status', { status });
+    }
+
+    const [reservations, total] = await queryBuilder.getManyAndCount();
+
+    const data = reservations.map((data) => {
+      const { seat, ...reservation } = data;
+      const { session, ...reservedSeat } = seat;
+      return {
+        ...reservation,
+        reservedSeat,
+        session,
+      };
+    });
+
+    return new PaginatedResponseFactory({
+      data,
+      limit,
+      page,
+      total,
+    });
   }
 }
