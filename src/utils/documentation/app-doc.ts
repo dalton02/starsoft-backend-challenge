@@ -5,7 +5,7 @@ import { DECORATORS } from '@nestjs/swagger/dist/constants';
 import { apiReference } from '@scalar/nestjs-api-reference';
 import { customCss } from './cssDocs';
 import * as fs from 'fs';
-import path from 'path';
+import * as path from 'path';
 
 export class AppDoc {
   private document: OpenAPIObject | Record<string, any>;
@@ -15,16 +15,9 @@ export class AppDoc {
   }
 
   private init() {
-    const descriptionPath = path.join(
-      __dirname,
-      'markdown',
-      'openapi-description.md',
-    );
     const config = new DocumentBuilder()
       .setTitle(process.env.APP_NAME || 'API')
-      .setDescription(
-        fs.readFileSync(descriptionPath, 'utf8') || 'Documentação da API',
-      )
+      .setDescription('Documentação StarSoft Challenge')
       .setVersion(process.env.APP_VERSION || '0.0')
       .addBearerAuth()
       .addBasicAuth()
@@ -50,7 +43,6 @@ export class AppDoc {
         url: '/openapi.json',
         darkMode: true,
         hideModels: true,
-        showDeveloperTools: 'never',
         hideDownloadButton: true,
         customCss,
         metaData: {

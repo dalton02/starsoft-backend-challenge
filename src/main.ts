@@ -5,14 +5,11 @@ import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
 import { ValidationFactory } from './utils/errors/errors-validation';
 import { ResponseInterceptor } from './utils/interceptors/response.interceptor';
 import { AppErrorFilter } from './utils/errors/errors.filter';
-const cookieParser = require('cookie-parser');
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   new AppDoc(app);
-
-  app.use(cookieParser());
 
   app.useGlobalPipes(
     new ValidationPipe({

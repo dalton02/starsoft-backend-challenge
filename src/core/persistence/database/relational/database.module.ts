@@ -1,17 +1,16 @@
 import { Global, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { dataSourceOptions } from './database.source';
+import { niceEnv } from 'src/utils/functions/env';
 
 @Global()
 @Module({
   imports: [
     TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
+      useFactory: () => ({
         type: 'postgres',
-        url: config.get('DATABASE_URL'),
         autoLoadEntities: true,
+        url: niceEnv.DATABASE_URL,
         synchronize: false,
         logging: ['query', 'error'],
       }),

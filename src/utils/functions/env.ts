@@ -6,4 +6,6 @@ export const niceEnv = cleanEnv(process.env, {
   REDIS_URL: str(),
   DATABASE_URL: str(),
   TEST_DATABASE_URL: str(),
+  TOKEN_DURATION: num(),
+  JWT_SECRET: str(),
 });
