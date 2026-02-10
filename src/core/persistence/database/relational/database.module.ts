@@ -17,7 +17,7 @@ import { Reservation } from 'src/core/session/entities/reservation.entity';
         entities: [User, Session, Seat, Reservation],
         url: niceEnv.DATABASE_URL,
         synchronize: false,
-        logging: ['query', 'error'],
+        logging: ['error'],
       }),
     }),
   ],

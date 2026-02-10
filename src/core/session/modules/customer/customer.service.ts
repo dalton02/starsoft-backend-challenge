@@ -20,6 +20,7 @@ import { type Channel } from 'amqplib';
 import { RabbitProvider } from 'src/core/persistence/messager/rabbit.provider';
 import { groupCaches } from 'src/utils/functions/cache';
 import { RedisService } from 'src/core/persistence/database/redis/redis.service';
+import { PaymentStatus } from '../../enums/payment.enum';
 @Injectable()
 export class CustomerSessionService {
   private CACHE_PAYMENT: ReturnType<typeof groupCaches>['reservation'];
@@ -32,7 +33,36 @@ export class CustomerSessionService {
     this.CACHE_PAYMENT = groupCaches(redis).reservation;
   }
 
-  async makePayment() {}
+  async makePayment(params: CustomerSessionModel.ConfirmPayment) {
+    const { paymentKey, reservationId, userId } = params;
+    return await this.dataSource.transaction(async (entityManager) => {
+      const reservation = await entityManager
+        .getRepository(Reservation)
+        .createQueryBuilder('reservation')
+        .setLock('pessimistic_write')
+        .innerJoinAndSelect('reservation.seat', 'seat')
+        .where('reservation.id = :reservationId', { reservationId })
+        .getOne();
+
+      if (!reservation) {
+        throw new AppErrorNotFound('Reserva não foi encontrada');
+      }
+
+      if (reservation.status != PaymentStatus.PENDING) {
+        throw new AppErrorBadRequest('Reserva não está mais pendente');
+      }
+
+      const paymentInfo = await this.CACHE_PAYMENT.get(reservationId);
+
+      if (paymentInfo.paymentKey !== paymentKey) {
+        throw new AppErrorBadRequest('Chave de pagamento incorreta');
+      }
+
+      reservation.status = PaymentStatus.APPROVED;
+      reservation.seat.status = SeatStatus.RESERVED;
+      await entityManager.save([reservation, reservation.seat]);
+    });
+  }
 
   async bookSeat(body: CustomerSessionModel.BookSeatRequest) {
     const { seatId, userId } = body;

@@ -12,7 +12,7 @@ export const dataSourceOptions: DataSourceOptions = {
   synchronize: false,
   migrations: ['migrations/*{.ts,.js,.mts}'],
   migrationsRun: false,
-  logging: ['query', 'error'],
+  logging: ['error'],
 };
 
 const dataSource = new DataSource(dataSourceOptions);

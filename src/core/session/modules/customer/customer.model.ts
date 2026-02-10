@@ -14,13 +14,14 @@ export namespace CustomerSessionModel {
     userId: string;
   }
 
-  export class BodyPayForSeat {
-    @IsNumber()
+  export class BodyPayment {
+    @ApiProperty({})
+    @IsString()
     @IsNotEmpty()
-    chanceOfFailure: number;
+    paymentKey: string;
   }
 
-  export class ConfirmPayment extends BodyPayForSeat {
+  export class ConfirmPayment extends BodyPayment {
     reservationId: string;
     userId: string;
   }

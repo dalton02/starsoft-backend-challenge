@@ -88,14 +88,16 @@ export class CustomerConsumer {
   private async handleExpiredReservation(params: EventReservationCreated) {
     const { reservationId, seatId } = params;
 
-    console.log('TEMPO DE ESPERA ACABOU, VERIFICANDO SE RESERVA FOI PAGA');
-
     return await this.dataSource.transaction(async (entityManager) => {
       //Tanto para o pagamento quanto para o timeout a gente vai dar lock na reserva
       const reservation = await entityManager.findOne(Reservation, {
         where: { id: reservationId },
         lock: { mode: 'pessimistic_write' },
       });
+
+      if (reservation.status !== PaymentStatus.PENDING) {
+        return;
+      }
 
       const seat = await entityManager.findOne(Seat, {
         where: { id: seatId },

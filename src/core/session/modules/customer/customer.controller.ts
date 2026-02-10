@@ -1,4 +1,12 @@
-import { Controller, Param, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Param,
+  Post,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { UserRole } from 'src/core/auth/enum/role.enum';
 import { JwtAuthGuard } from 'src/core/auth/guard/jwt.guard';
@@ -29,5 +37,17 @@ export class CustomerSessionController {
   @Post('/book/:seatId')
   async bookSeat(@Param('seatId') seatId: string, @UserId() userId: string) {
     return await this.service.bookSeat({ seatId, userId });
+  }
+
+  @Doc({
+    name: 'Pay the reservation',
+  })
+  @Put('/pay/:reservationId')
+  async pay(
+    @Param('reservationId') reservationId: string,
+    @UserId() userId: string,
+    @Body() body: CustomerSessionModel.BodyPayment,
+  ) {
+    return await this.service.makePayment({ ...body, userId, reservationId });
   }
 }
