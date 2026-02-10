@@ -1,4 +1,4 @@
-import { Controller, Inject } from '@nestjs/common';
+import { Controller, Inject, Injectable } from '@nestjs/common';
 import {
   ClientProxy,
   EventPattern,
@@ -21,7 +21,7 @@ import { SeatStatus } from '../../enums/seat.enum';
 import { RabbitProvider } from 'src/core/persistence/messager/rabbit.provider';
 const crypto = require('crypto');
 
-@Controller()
+@Injectable()
 export class CustomerConsumer {
   private readonly MAX_PAYMENT_TIMEOUT_SECONDS = 30;
   private CACHE_PAYMENT: ReturnType<typeof groupCaches>['reservation'];

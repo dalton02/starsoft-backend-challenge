@@ -7,7 +7,7 @@ import { niceEnv } from 'src/utils/functions/env';
 import { RabbitQueue } from 'src/utils/types/rabbit';
 
 @Module({
-  providers: [CustomerSessionService],
-  controllers: [CustomerSessionController, CustomerConsumer],
+  providers: [CustomerSessionService, CustomerConsumer],
+  controllers: [CustomerSessionController],
 })
 export class CustomerModule {}
