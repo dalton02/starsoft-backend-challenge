@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { type Channel } from 'amqplib';
 import amqp from 'amqplib';
+import { isRetryableError } from 'src/utils/errors/custom-errors';
 import { niceEnv } from 'src/utils/functions/env';
 import { RabbitEvent, RabbitQueue } from 'src/utils/types/rabbit';
 
@@ -32,7 +33,11 @@ export class RabbitProvider {
           await fn(payload);
           this.channel.ack(msg);
         } catch (err) {
-          this.channel.nack(msg, false, false);
+          if (isRetryableError(err)) {
+            this.channel.nack(msg, false, true);
+          } else {
+            this.channel.nack(msg, false, false);
+          }
         }
       },
       options,

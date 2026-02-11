@@ -151,29 +151,25 @@ export class CustomerConsumer {
   private async reservationCreated(params: EventReservation) {
     const { reservationId, seatId, sessionId } = params;
 
-    try {
-      console.log('-----------------------------------------------\n\n');
-      console.log(
-        'IT IS TIME TO PAY FOR YOUR RESERVATION, YOU HAVE 30 SECONDS BEFORE WE STOP HOLDING THE SEAT FOR YOU\n',
-      );
-      console.log('ID RESERVATION: ' + reservationId);
-      console.log('\n\n-----------------------------------------------');
+    console.log('-----------------------------------------------\n\n');
+    console.log(
+      'IT IS TIME TO PAY FOR YOUR RESERVATION, YOU HAVE 30 SECONDS BEFORE WE STOP HOLDING THE SEAT FOR YOU\n',
+    );
+    console.log('ID RESERVATION: ' + reservationId);
+    console.log('\n\n-----------------------------------------------');
 
-      let session = await this.memory.CACHE_SESSION.get({ sessionId });
-      if (!session) session = await this.memory.hydrateFromDB(sessionId); //Possivel erro de não existe no banc
+    let session = await this.memory.CACHE_SESSION.get({ sessionId });
+    if (!session) session = await this.memory.hydrateFromDB(sessionId);
 
-      const seatReserved = session.seats.find((seat) => seat.id === seatId);
+    const seatReserved = session.seats.find((seat) => seat.id === seatId);
 
-      if (!seatReserved) {
-        throw new Error('Seat does not exist');
-      }
-
-      await this.memory.hydrateSeat({
-        sessionId,
-        seat: { ...seatReserved, status: SeatStatus.HOLDING },
-      });
-    } catch (err) {
-      console.warn(err);
+    if (!seatReserved) {
+      throw new Error('Seat does not exist');
     }
+
+    await this.memory.hydrateSeat({
+      sessionId,
+      seat: { ...seatReserved, status: SeatStatus.HOLDING },
+    });
   }
 }

@@ -14,6 +14,7 @@ export class RedisService {
     });
 
     this.logger = new Logger(RedisService.name);
+    this.redis.flushall();
   }
 
   generateCache<Content, Keys extends Record<string, string | number>>(

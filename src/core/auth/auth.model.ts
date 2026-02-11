@@ -38,6 +38,10 @@ export namespace AuthModel {
     role: UserRole;
   }
 
+  export class UserContext extends User {
+    requests: number;
+  }
+
   export class TokenPayload {
     sub: string;
   }

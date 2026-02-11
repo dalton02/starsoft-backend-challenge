@@ -8,21 +8,17 @@ import { minutesToSeconds, secondsToMinutes } from 'date-fns';
 
 @Injectable()
 export class MemoryAuthService {
-  CACHE_USER: RedisCache<AuthModel.User, { userId: string }>;
-  CACHE_RATE_LIMITING: RedisCache<{ trys: number }, { ip: string }>;
+  CACHE_USER: RedisCache<AuthModel.UserContext, { userId: string }>;
+
   constructor(private readonly redisService: RedisService) {
     this.CACHE_USER = redisService.generateCache<
-      AuthModel.User,
+      AuthModel.UserContext,
       { userId: string }
     >('user-${userId}', minutesToSeconds(60));
-    this.CACHE_RATE_LIMITING = redisService.generateCache<
-      { trys: number },
-      { ip: string }
-    >('ip-${ip}', minutesToSeconds(60));
   }
 
   async hydrate(user: AuthModel.User) {
-    await this.CACHE_USER.set({ userId: user.id }, user);
+    await this.CACHE_USER.set({ userId: user.id }, { ...user, requests: 0 });
   }
 
   async get(userId: string) {
