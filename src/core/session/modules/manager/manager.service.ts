@@ -37,6 +37,7 @@ export class ManagerSessionService {
 
       return {
         ...session,
+        seats,
         placements,
       };
     });

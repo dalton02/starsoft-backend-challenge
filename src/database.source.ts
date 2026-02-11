@@ -10,8 +10,8 @@ export const dataSourceOptions: DataSourceOptions = {
   url: niceEnv.DATABASE_URL,
   entities: [User, Seat, Session, Reservation],
   synchronize: false,
-  migrations: ['migrations/*{.ts,.js,.mts}'],
-  migrationsRun: false,
+  migrations: ['migrations/*{.ts,.js}'],
+  migrationsRun: true,
   logging: ['error'],
 };
 

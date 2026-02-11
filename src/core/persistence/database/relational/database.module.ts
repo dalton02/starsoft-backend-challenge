@@ -1,6 +1,6 @@
 import { Global, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { dataSourceOptions } from './database.source';
+import { dataSourceOptions } from '../../../../database.source';
 import { niceEnv } from 'src/utils/functions/env';
 import { User } from 'src/core/auth/entities/user.entity';
 import { Session } from 'src/core/session/entities/session.entity';
@@ -17,6 +17,8 @@ import { Reservation } from 'src/core/session/entities/reservation.entity';
         entities: [User, Session, Seat, Reservation],
         url: niceEnv.DATABASE_URL,
         synchronize: false,
+        migrationsRun: true,
+        migrations: ['migrations/*{.ts,.js}'],
         logging: ['error'],
       }),
     }),

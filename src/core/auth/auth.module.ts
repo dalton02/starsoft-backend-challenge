@@ -6,9 +6,11 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtAuthGuard } from './guard/jwt.guard';
 import { JwtStrategy } from './guard/jwt.strategy';
+import { MemoryAuthModule } from './memory/memory-auth.module';
 
 @Module({
   imports: [
+    MemoryAuthModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: Number(process.env.BEARER_TOKEN_DURATION) },

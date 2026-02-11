@@ -11,21 +11,20 @@ export class AuthController {
 
   @Doc({
     name: 'Sign Up',
-    description: 'Cadastrar no sistema como customer ou manager',
-    response: AuthModel.AuthResponse,
+    description: 'Create a user in the system as Customer or Manager',
+    response: AuthModel.Response.Auth,
   })
   @Post('/sign-up')
-  async signUp(@Body() body: AuthModel.CreateUser) {
+  async signUp(@Body() body: AuthModel.Request.CreateUser) {
     return await this.service.signUp(body);
   }
   @Doc({
     name: 'Sign In',
-
-    description: 'Login no sistema',
-    response: AuthModel.AuthResponse,
+    description: 'Just a simple login',
+    response: AuthModel.Response.Auth,
   })
   @Post('/sign-in')
-  async signIn(@Body() body: AuthModel.Login) {
+  async signIn(@Body() body: AuthModel.Request.Login) {
     return await this.service.signIn(body);
   }
 }

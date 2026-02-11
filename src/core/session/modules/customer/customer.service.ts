@@ -20,8 +20,6 @@ import { ClientKafka, ClientProxy } from '@nestjs/microservices';
 import { RabbitQueue, type EventReservation } from 'src/utils/types/rabbit';
 import { type Channel } from 'amqplib';
 import { RabbitProvider } from 'src/core/persistence/messager/rabbit.provider';
-import { groupCaches } from 'src/utils/functions/cache';
-import { RedisService } from 'src/core/persistence/database/redis/redis.service';
 import { PaymentStatus } from '../../enums/payment.enum';
 import { SessionModel } from '../../dto/session.model';
 import { MemorySessionService } from '../memory/memory-session.service';
@@ -103,7 +101,7 @@ export class CustomerSessionService {
         seat: { id: seatId },
         expiresAt: addSeconds(
           new Date(),
-          SessionModel.MAX_PAYMENT_TIMEOUT_SECONDS,
+          this.memory.MAX_PAYMENT_TIMEOUT_SECONDS,
         ),
       });
 
@@ -143,7 +141,7 @@ export class CustomerSessionService {
       throw new AppErrorNotFound('Sessão não encontrada');
     }
 
-    this.memory.hydrateSession(session);
+    await this.memory.hydrateSession(session);
 
     return session;
   }

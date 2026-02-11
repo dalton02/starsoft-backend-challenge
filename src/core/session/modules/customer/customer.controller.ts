@@ -49,7 +49,7 @@ export class CustomerSessionController {
 
   @Doc({
     name: 'Get session',
-    response: CustomerModel.Request.GetSession,
+    response: SessionModel.Session,
   })
   @Get('/session/:sessionId')
   async getSession(@Param('sessionId') sessionId: string) {

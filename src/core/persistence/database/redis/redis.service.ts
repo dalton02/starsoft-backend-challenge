@@ -5,12 +5,14 @@ import { niceEnv } from 'src/utils/functions/env';
 export class RedisService {
   public readonly redis: Redis;
   private readonly logger: Logger;
-  private globalPrefix = '';
 
-  constructor(globalPrefix?: string) {
-    this.redis = new Redis(niceEnv.REDIS_URL);
+  constructor() {
+    this.redis = new Redis(niceEnv.REDIS_URL, {
+      connectTimeout: 5000,
+      commandTimeout: 3000,
+      maxRetriesPerRequest: 2,
+    });
     this.logger = new Logger(RedisService.name);
-    this.globalPrefix = globalPrefix ?? '';
   }
 
   generateCache<Content, Keys extends Record<string, string | number>>(
@@ -21,7 +23,6 @@ export class RedisService {
       this.redis,
       expiration,
       keyTemplate,
-      this.globalPrefix,
       this.logger,
     );
   }
@@ -38,14 +39,12 @@ export class RedisCache<Content, Keys extends Record<string, string | number>> {
     redis: Redis,
     expiration: number,
     keyTemplate: string,
-    globalPrefix: string,
     logger: Logger,
   ) {
     this.redis = redis;
     this.expiration = expiration;
     this.keyTemplate = keyTemplate;
     this.logger = logger;
-    this.prefix = globalPrefix ? `${globalPrefix}:` : '';
   }
 
   private buildKey(params: Keys): string {
@@ -75,6 +74,7 @@ export class RedisCache<Content, Keys extends Record<string, string | number>> {
         'EX',
         this.expiration,
       );
+
       this.logger.log(
         'Updating redis key: ',
         key,

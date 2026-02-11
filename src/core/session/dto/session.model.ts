@@ -3,7 +3,6 @@ import { SeatStatus } from '../enums/seat.enum';
 import { PaginatedResponseFactory } from 'src/utils/types/default.pagination';
 
 export namespace SessionModel {
-  export const MAX_PAYMENT_TIMEOUT_SECONDS = 30;
   export class Seat {
     @ApiProperty()
     id: string;

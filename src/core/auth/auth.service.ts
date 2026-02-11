@@ -12,11 +12,13 @@ import {
 } from 'src/utils/errors/app-errors';
 import { JwtService } from '@nestjs/jwt';
 import { niceEnv } from 'src/utils/functions/env';
+import { MemoryAuthService } from './memory/memory-auth.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly jwtService: JwtService,
+    private readonly memory: MemoryAuthService,
     @InjectRepository(User) private userRepositoty: Repository<User>,
   ) {}
 
@@ -31,7 +33,7 @@ export class AuthService {
     return token;
   }
 
-  async signUp(params: AuthModel.CreateUser) {
+  async signUp(params: AuthModel.Request.CreateUser) {
     const { email, name, password, role } = params;
 
     const userWithEmail = await this.userRepositoty.findOneBy({ email });
@@ -55,7 +57,7 @@ export class AuthService {
     return { token };
   }
 
-  async signIn(params: AuthModel.Login) {
+  async signIn(params: AuthModel.Request.Login) {
     const { email, password } = params;
 
     const user = await this.userRepositoty.findOneBy({ email });
@@ -74,12 +76,18 @@ export class AuthService {
     return { token };
   }
 
-  async gatherUserInfo(userId: string) {
+  async gatherUserInfo(userId: string): Promise<AuthModel.User> {
+    const userCached = await this.memory.get(userId);
+    if (userCached) return userCached;
+
     const user = await this.userRepositoty.findOneBy({ id: userId });
 
     if (!user) {
       throw new AppErrorNotFound('Usuário não encontrado');
     }
+
+    this.memory.hydrate(user);
+
     return user;
   }
 }

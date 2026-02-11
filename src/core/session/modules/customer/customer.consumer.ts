@@ -1,13 +1,5 @@
 import { Controller, Inject, Injectable } from '@nestjs/common';
-import {
-  ClientProxy,
-  EventPattern,
-  MessagePattern,
-  Payload,
-} from '@nestjs/microservices';
 import { RedisService } from 'src/core/persistence/database/redis/redis.service';
-import { groupCaches } from 'src/utils/functions/cache';
-import { wait } from 'src/utils/functions/time';
 import {
   EventReservation,
   RabbitQueue,
@@ -19,25 +11,18 @@ import { Reservation } from '../../entities/reservation.entity';
 import { PaymentStatus } from '../../enums/payment.enum';
 import { SeatStatus } from '../../enums/seat.enum';
 import { RabbitProvider } from 'src/core/persistence/messager/rabbit.provider';
-import { CustomerModel } from './customer.model';
 import { SessionModel } from '../../dto/session.model';
 import { MemorySessionService } from '../memory/memory-session.service';
-const crypto = require('crypto');
+import { secondsToMilliseconds } from 'date-fns';
 
 @Injectable()
 export class CustomerConsumer {
-  private CACHE_SESSION: ReturnType<typeof groupCaches>['session'];
-  private CACHE_SEAT: ReturnType<typeof groupCaches>['seat'];
-
   constructor(
     private readonly redisService: RedisService,
     private readonly dataSource: DataSource,
     private readonly rabbit: RabbitProvider,
     private readonly memory: MemorySessionService,
-  ) {
-    this.CACHE_SESSION = groupCaches(redisService).session;
-    this.CACHE_SEAT = groupCaches(redisService).seat;
-  }
+  ) {}
 
   async onModuleInit() {
     await this.prepareQueues();
@@ -64,7 +49,9 @@ export class CustomerConsumer {
     await this.rabbit.channel.assertQueue(RabbitQueue.RESERVATION_DELAY, {
       durable: true,
       arguments: {
-        'x-message-ttl': SessionModel.MAX_PAYMENT_TIMEOUT_SECONDS * 1000,
+        'x-message-ttl': secondsToMilliseconds(
+          this.memory.MAX_PAYMENT_TIMEOUT_SECONDS,
+        ),
         'x-dead-letter-exchange': 'reservation.events',
         'x-dead-letter-routing-key': RabbitQueue.RESERVATION_EXPIRED,
       },
@@ -104,12 +91,14 @@ export class CustomerConsumer {
   private async handleConfirmedReservation(params: EventReservation) {
     const { reservationId, seatId, sessionId } = params;
 
-    const seat = await this.CACHE_SEAT.get({ seatId, sessionId });
+    const session = await this.memory.getSession(sessionId);
 
-    if (seat) {
+    const seatReserved = session.seats.find((seat) => seat.id === seatId);
+
+    if (seatReserved) {
       await this.memory.hydrateSeat({
         sessionId,
-        seat: { ...seat, status: SeatStatus.RESERVED },
+        seat: { ...seatReserved, status: SeatStatus.RESERVED },
       });
     }
   }
@@ -117,6 +106,7 @@ export class CustomerConsumer {
   private async handleExpiredReservation(params: EventReservation) {
     const { reservationId, seatId, sessionId } = params;
 
+    console.log('VERIFICANDO SE RESERVA FOI REALIZADA COM SUCESSO');
     const { reservation, seat } = await this.dataSource.transaction(
       async (entityManager) => {
         //Tanto para o pagamento quanto para o timeout a gente vai dar lock na reserva
@@ -125,13 +115,13 @@ export class CustomerConsumer {
           lock: { mode: 'pessimistic_write' },
         });
 
-        if (reservation.status !== PaymentStatus.PENDING) {
-          return;
-        }
-
         const seat = await entityManager.findOne(Seat, {
           where: { id: seatId },
         });
+
+        if (reservation.status !== PaymentStatus.PENDING) {
+          return { reservation, seat };
+        }
 
         reservation.status = PaymentStatus.CANCELLED;
         seat.status = SeatStatus.AVAILABLE;
@@ -146,20 +136,26 @@ export class CustomerConsumer {
   private async reservationCreated(params: EventReservation) {
     const { reservationId, seatId, sessionId } = params;
 
-    const seat = await this.CACHE_SEAT.get({ seatId, sessionId });
+    try {
+      console.log('-----------------------------------------------\n\n');
+      console.log(
+        'IT IS TIME TO PAY FOR YOUR RESERVATION, YOU HAVE 30 SECONDS BEFORE WE STOP HOLDING THE SEAT FOR YOU\n',
+      );
+      console.log('ID RESERVATION: ' + reservationId);
+      console.log('\n\n-----------------------------------------------');
 
-    if (seat) {
-      await this.memory.hydrateSeat({
-        sessionId,
-        seat: { ...seat, status: SeatStatus.HOLDING },
-      });
+      const session = await this.memory.getSession(sessionId);
+
+      const seatReserved = session.seats.find((seat) => seat.id === seatId);
+
+      if (seatReserved) {
+        await this.memory.hydrateSeat({
+          sessionId,
+          seat: { ...seatReserved, status: SeatStatus.HOLDING },
+        });
+      }
+    } catch (err) {
+      console.warn(err);
     }
-
-    console.log('-----------------------------------------------\n\n');
-    console.log(
-      'IT IS TIME TO PAY FOR YOUR RESERVATION, YOU HAVE 30 SECONDS BEFORE WE STOP HOLDING THE SEAT FOR YOU\n',
-    );
-    console.log('ID RESERVATION: ' + reservationId);
-    console.log('\n\n-----------------------------------------------');
   }
 }

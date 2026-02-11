@@ -1,74 +1,97 @@
 import { Injectable } from '@nestjs/common';
-import { RedisService } from 'src/core/persistence/database/redis/redis.service';
-import { RabbitProvider } from 'src/core/persistence/messager/rabbit.provider';
-import { groupCaches } from 'src/utils/functions/cache';
-import { DataSource } from 'typeorm';
+import {
+  RedisCache,
+  RedisService,
+} from 'src/core/persistence/database/redis/redis.service';
 import { SessionModel } from '../../dto/session.model';
-
+import { MemorySessionModel } from './memory-session.dto';
+import { getMilliseconds, minutesToSeconds } from 'date-fns';
+import { DataSource } from 'typeorm';
+import { Session } from '../../entities/session.entity';
+import Redlock from 'redlock';
+import { SeatStatus } from '../../enums/seat.enum';
 @Injectable()
 export class MemorySessionService {
-  private CACHE_SESSION: ReturnType<typeof groupCaches>['session'];
-  private CACHE_SEAT: ReturnType<typeof groupCaches>['seat'];
+  MAX_PAYMENT_TIMEOUT_SECONDS = 30;
+  CACHE_SESSION: RedisCache<
+    MemorySessionModel.SessionType,
+    MemorySessionModel.SessionKey
+  >;
+  private redLock: Redlock;
 
-  constructor(private readonly redisService: RedisService) {
-    this.CACHE_SESSION = groupCaches(redisService).session;
-    this.CACHE_SEAT = groupCaches(redisService).seat;
+  constructor(
+    readonly redisService: RedisService,
+    private readonly dataSource: DataSource,
+  ) {
+    this.CACHE_SESSION = redisService.generateCache<
+      MemorySessionModel.SessionType,
+      MemorySessionModel.SessionKey
+    >('session-${sessionId}', minutesToSeconds(10));
+    this.redLock = new Redlock([this.redisService.redis], {
+      driftFactor: 0.01,
+      retryCount: 10,
+      retryDelay: 200,
+      retryJitter: 200,
+      automaticExtensionThreshold: 500,
+    });
+  }
+
+  async onModuleInit() {}
+
+  async hydrateFromDB(sessionId: string) {
+    console.log('HYDRATION FROM DB');
+    const session = await this.dataSource.getRepository(Session).findOne({
+      where: {
+        id: sessionId,
+      },
+      relations: { seats: true },
+    });
+
+    if (!session) {
+      return;
+    }
+
+    await this.hydrateSession(session);
   }
 
   async getSession(sessionId: string): Promise<SessionModel.Session> {
-    const sessionCached = await this.CACHE_SESSION.get({ sessionId });
+    const session = await this.CACHE_SESSION.get({ sessionId });
 
-    const keys = await this.redisService.redis.keys(
-      `session-${sessionId}-seat*`,
-    );
+    if (!session) await this.hydrateFromDB(sessionId);
 
-    const seats = [];
-    for (const key of keys) {
-      const seatData = await this.redisService.redis.get(key);
-      seats.push(JSON.parse(seatData) as SessionModel.Seat);
-    }
-
-    if (sessionCached && sessionCached.countSeats === seats.length) {
-      return {
-        ...sessionCached,
-        seats,
-      };
-    }
-    return null;
+    return await this.CACHE_SESSION.get({ sessionId });
   }
 
-  async hydrateSeat(params: { sessionId: string; seat: SessionModel.Seat }) {
+  async hydrateSeat(params: {
+    sessionId: string;
+    seat: SessionModel.Seat;
+  }): Promise<{ startTime: Date; endTime: Date }> {
     const { seat, sessionId } = params;
-    const cachedSession = await this.CACHE_SESSION.get({ sessionId });
-    if (!cachedSession) return;
-    this.CACHE_SEAT.set({ seatId: seat.id, sessionId }, seat);
+
+    const lockKey = `lock:${sessionId}`;
+    let lock = await this.redLock.acquire([lockKey], 5000);
+    let startTime = new Date();
+    let endTime = new Date();
+    try {
+      const cachedSession = await this.getSession(sessionId);
+
+      const seatIndex = cachedSession.seats.findIndex((s) => s.id === seat.id);
+      if (seatIndex === -1) {
+        return;
+      }
+
+      cachedSession.seats[seatIndex] = seat;
+      await this.CACHE_SESSION.set({ sessionId }, cachedSession);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      await lock.release();
+      endTime = new Date();
+    }
+    return { startTime, endTime };
   }
 
   async hydrateSession(session: SessionModel.Session) {
-    const { duration, id, movie, price, room, showtime, seats } = session;
-    await this.CACHE_SESSION.set(
-      { sessionId: session.id },
-      {
-        duration,
-        id,
-        movie,
-        price,
-        room,
-        showtime,
-        countSeats: seats.length,
-      },
-    );
-    await Promise.all(
-      seats.map((seat) =>
-        this.CACHE_SEAT.set(
-          { seatId: seat.id, sessionId: session.id },
-          {
-            id: seat.id,
-            placement: seat.placement,
-            status: seat.status,
-          },
-        ),
-      ),
-    );
+    await this.CACHE_SESSION.set({ sessionId: session.id }, session);
   }
 }

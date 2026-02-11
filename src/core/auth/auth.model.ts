@@ -1,4 +1,4 @@
-import { ApiProperty, IntersectionType } from '@nestjs/swagger';
+import { ApiProperty, IntersectionType, OmitType } from '@nestjs/swagger';
 import {
   IsEmail,
   IsEnum,
@@ -9,33 +9,34 @@ import {
 import { UserRole } from './enum/role.enum';
 
 export namespace AuthModel {
-  class Password {
-    @ApiProperty({})
+  class PasswordDto {
+    @ApiProperty({ example: '@Senha123' })
     @IsNotEmpty()
     @IsStrongPassword()
     password: string;
   }
 
-  class Email {
-    @ApiProperty({})
+  class EmailDto {
+    @ApiProperty({ example: 'manager@email.com' })
     @IsNotEmpty()
     @IsEmail()
     email: string;
   }
 
-  export class CreateUser extends IntersectionType(Password, Email) {
-    @ApiProperty({ description: '' })
+  export class User extends IntersectionType(PasswordDto, EmailDto) {
+    @ApiProperty({})
+    id: string;
+
+    @ApiProperty({ description: '', example: 'Dalton Gomes' })
     @IsNotEmpty()
     @IsString()
     name: string;
 
-    @ApiProperty({ enum: UserRole })
+    @ApiProperty({ enum: UserRole, example: UserRole.MANAGER })
     @IsNotEmpty()
     @IsEnum(UserRole)
     role: UserRole;
   }
-
-  export class Login extends IntersectionType(Password, Email) {}
 
   export class TokenPayload {
     sub: string;
@@ -46,8 +47,15 @@ export namespace AuthModel {
     role: UserRole;
   }
 
-  export class AuthResponse {
-    @ApiProperty({ description: 'Bearer Token' })
-    token: string;
+  export namespace Request {
+    export class CreateUser extends OmitType(User, ['id']) {}
+    export class Login extends IntersectionType(PasswordDto, EmailDto) {}
+  }
+
+  export namespace Response {
+    export class Auth {
+      @ApiProperty({ description: 'Bearer Token' })
+      token: string;
+    }
   }
 }

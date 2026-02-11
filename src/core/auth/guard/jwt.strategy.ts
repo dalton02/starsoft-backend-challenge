@@ -22,7 +22,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt-strategy') {
 
     return {
       id: userInfo.id,
-      role: userInfo.role as AuthModel.Role,
+      role: userInfo.role,
     };
   }
 }
