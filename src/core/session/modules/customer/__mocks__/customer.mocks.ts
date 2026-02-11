@@ -5,16 +5,14 @@ import { Session } from 'src/core/session/entities/session.entity';
 import { SeatStatus } from 'src/core/session/enums/seat.enum';
 
 export namespace MockCustomer {
-  export const seat: Seat = {
-    id: '123',
+  export const seat = {
+    id: 'test-seat-1',
     placement: 'A20',
-    reservations: [],
-    session: null as any,
     status: SeatStatus.AVAILABLE,
-  };
+  } as Seat;
 
   export const session: Session = {
-    id: '123',
+    id: 'test-session-1',
     duration: 123,
     movie: 'HOmem aranha',
     price: 200,
@@ -23,14 +21,21 @@ export namespace MockCustomer {
     showtime: new Date(),
   };
 
-  export const user: User = {
-    id: '123',
-    email: 'email@email.com',
+  export const userOne: User = {
+    id: 'test-user-1',
+    email: 'test-email-1@email.com',
     name: 'Nome',
     password: 'sadasds',
     reservations: [],
     role: UserRole.CUSTOMER,
   };
 
-  seat.session = session;
+  export const userTwo: User = {
+    id: 'test-user-2',
+    email: 'test0email02@email.com',
+    name: 'Nome',
+    password: 'sadasds',
+    reservations: [],
+    role: UserRole.CUSTOMER,
+  };
 }

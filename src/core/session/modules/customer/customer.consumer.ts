@@ -1,4 +1,4 @@
-import { Controller, Inject, Injectable } from '@nestjs/common';
+import { Controller, Inject, Injectable, Logger } from '@nestjs/common';
 import { RedisService } from 'src/core/persistence/database/redis/redis.service';
 import {
   EventReservation,
@@ -91,32 +91,36 @@ export class CustomerConsumer {
   private async handleConfirmedReservation(params: EventReservation) {
     const { reservationId, seatId, sessionId } = params;
 
-    const session = await this.memory.getSession(sessionId);
+    let session = await this.memory.CACHE_SESSION.get({ sessionId });
+    if (!session) session = await this.memory.hydrateFromDB(sessionId); //Possivel erro de não existe no banc
 
     const seatReserved = session.seats.find((seat) => seat.id === seatId);
 
-    if (seatReserved) {
-      await this.memory.hydrateSeat({
-        sessionId,
-        seat: { ...seatReserved, status: SeatStatus.RESERVED },
-      });
+    if (!seatReserved) {
+      throw new Error('Seat does not exist');
     }
+    await this.memory.hydrateSeat({
+      sessionId,
+      seat: { ...seatReserved, status: SeatStatus.RESERVED },
+    });
   }
 
   private async handleExpiredReservation(params: EventReservation) {
     const { reservationId, seatId, sessionId } = params;
 
-    console.log('VERIFICANDO SE RESERVA FOI REALIZADA COM SUCESSO');
+    console.log('-----------------------------------------------\n\n');
+    console.log('TEMPO LIMITE ESTOURADO, VERIFICANDO RESERVA');
+    console.log('\n\n-----------------------------------------------');
+
     const { reservation, seat } = await this.dataSource.transaction(
       async (entityManager) => {
-        //Tanto para o pagamento quanto para o timeout a gente vai dar lock na reserva
-        const reservation = await entityManager.findOne(Reservation, {
-          where: { id: reservationId },
+        const seat = await entityManager.findOne(Seat, {
+          where: { id: seatId },
           lock: { mode: 'pessimistic_write' },
         });
 
-        const seat = await entityManager.findOne(Seat, {
-          where: { id: seatId },
+        const reservation = await entityManager.findOne(Reservation, {
+          where: { id: reservationId },
         });
 
         if (reservation.status !== PaymentStatus.PENDING) {
@@ -125,6 +129,7 @@ export class CustomerConsumer {
 
         reservation.status = PaymentStatus.CANCELLED;
         seat.status = SeatStatus.AVAILABLE;
+        seat.currentReservation = null;
 
         await entityManager.save([reservation, seat]);
         return { reservation, seat };
@@ -144,16 +149,19 @@ export class CustomerConsumer {
       console.log('ID RESERVATION: ' + reservationId);
       console.log('\n\n-----------------------------------------------');
 
-      const session = await this.memory.getSession(sessionId);
+      let session = await this.memory.CACHE_SESSION.get({ sessionId });
+      if (!session) session = await this.memory.hydrateFromDB(sessionId); //Possivel erro de não existe no banc
 
       const seatReserved = session.seats.find((seat) => seat.id === seatId);
 
-      if (seatReserved) {
-        await this.memory.hydrateSeat({
-          sessionId,
-          seat: { ...seatReserved, status: SeatStatus.HOLDING },
-        });
+      if (!seatReserved) {
+        throw new Error('Seat does not exist');
       }
+
+      await this.memory.hydrateSeat({
+        sessionId,
+        seat: { ...seatReserved, status: SeatStatus.HOLDING },
+      });
     } catch (err) {
       console.warn(err);
     }

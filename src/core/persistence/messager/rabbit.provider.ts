@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { type Channel } from 'amqplib';
 import amqp from 'amqplib';
 import { niceEnv } from 'src/utils/functions/env';
@@ -7,10 +7,12 @@ import { RabbitEvent, RabbitQueue } from 'src/utils/types/rabbit';
 @Injectable()
 export class RabbitProvider {
   channel: Channel;
-
+  logger: Logger;
   async onModuleInit() {
     const conn = await amqp.connect(niceEnv.RABBIT_URL);
     this.channel = await conn.createChannel();
+    this.logger = new Logger();
+    this.logger.log('RABBIT MQ CONNECTED');
   }
 
   async publish(queue: RabbitQueue, payload: RabbitEvent) {

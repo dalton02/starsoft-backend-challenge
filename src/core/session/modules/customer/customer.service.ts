@@ -36,31 +36,32 @@ export class CustomerSessionService {
     const { reservationId, userId } = params;
     const { reservation, seat, session } = await this.dataSource.transaction(
       async (entityManager) => {
-        const reservation = await entityManager
-          .getRepository(Reservation)
-          .createQueryBuilder('reservation')
+        const seat = await entityManager
+          .getRepository(Seat)
+          .createQueryBuilder('seat')
           .setLock('pessimistic_write')
-          .innerJoinAndSelect('reservation.seat', 'seat')
+          .innerJoinAndSelect('seat.currentReservation', 'reservation')
           .innerJoinAndSelect('seat.session', 'session')
           .where('reservation.id = :reservationId', { reservationId })
           .getOne();
 
-        if (!reservation) {
+        if (!seat.currentReservation) {
           throw new AppErrorNotFound('Reserva não foi encontrada');
         }
 
-        if (reservation.status != PaymentStatus.PENDING) {
+        if (seat.currentReservation.status != PaymentStatus.PENDING) {
           throw new AppErrorBadRequest('Reserva não está mais pendente');
         }
 
-        reservation.status = PaymentStatus.APPROVED;
-        reservation.payedAt = new Date();
-        reservation.seat.status = SeatStatus.RESERVED;
-        await entityManager.save([reservation, reservation.seat]);
+        seat.currentReservation.status = PaymentStatus.APPROVED;
+        seat.currentReservation.payedAt = new Date();
+        seat.status = SeatStatus.RESERVED;
+
+        await entityManager.save([seat.currentReservation, seat]);
         return {
-          reservation,
-          seat: reservation.seat,
-          session: reservation.seat.session,
+          reservation: seat.currentReservation,
+          seat: seat,
+          session: seat.session,
         };
       },
     );
@@ -105,6 +106,8 @@ export class CustomerSessionService {
         ),
       });
 
+      seat.currentReservation = reservation;
+
       await entityManager.save([reservation, seat]);
 
       const payload: EventReservation = {
@@ -127,7 +130,7 @@ export class CustomerSessionService {
   ): Promise<SessionModel.Session> {
     const { sessionId } = params;
 
-    const sessionCached = await this.memory.getSession(sessionId);
+    const sessionCached = await this.memory.CACHE_SESSION.get({ sessionId });
     if (sessionCached) return sessionCached;
 
     const session = await this.dataSource.getRepository(Session).findOne({

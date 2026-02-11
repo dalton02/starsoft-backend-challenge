@@ -30,6 +30,10 @@ export class Seat {
   @JoinColumn({ name: 'session_id' })
   session: Relation<Session>;
 
+  @ManyToOne(() => Reservation)
+  @JoinColumn({ name: 'current_reservation_id' })
+  currentReservation: Relation<Reservation>;
+
   @OneToMany(() => Reservation, (reservation) => reservation.seat)
   reservations: Relation<Reservation[]>;
 }

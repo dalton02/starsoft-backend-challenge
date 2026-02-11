@@ -12,6 +12,7 @@ export class RedisService {
       commandTimeout: 3000,
       maxRetriesPerRequest: 2,
     });
+
     this.logger = new Logger(RedisService.name);
   }
 

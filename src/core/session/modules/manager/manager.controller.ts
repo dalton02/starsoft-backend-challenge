@@ -6,6 +6,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/core/auth/guard/jwt.guard';
 import { Roles, RolesGuard } from 'src/core/auth/guard/role.guard';
 import { UserRole } from 'src/core/auth/enum/role.enum';
+import { SessionModel } from '../../dto/session.model';
 
 @Controller('manager-session')
 @ApiTags('Session/Manager')
@@ -16,10 +17,10 @@ export class ManagerSessionController {
 
   @Doc({
     name: 'Create Session',
-    response: ManagerSessionModel.ResponseSession,
+    response: SessionModel.Session,
   })
   @Post('/create')
-  async create(@Body() body: ManagerSessionModel.CreateSession) {
+  async create(@Body() body: ManagerSessionModel.Request.CreateSession) {
     return await this.service.create(body);
   }
 }

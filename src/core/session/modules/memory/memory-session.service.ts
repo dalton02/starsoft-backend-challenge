@@ -9,7 +9,7 @@ import { getMilliseconds, minutesToSeconds } from 'date-fns';
 import { DataSource } from 'typeorm';
 import { Session } from '../../entities/session.entity';
 import Redlock from 'redlock';
-import { SeatStatus } from '../../enums/seat.enum';
+
 @Injectable()
 export class MemorySessionService {
   MAX_PAYMENT_TIMEOUT_SECONDS = 30;
@@ -17,7 +17,7 @@ export class MemorySessionService {
     MemorySessionModel.SessionType,
     MemorySessionModel.SessionKey
   >;
-  private redLock: Redlock;
+  private redisLocker: Redlock;
 
   constructor(
     readonly redisService: RedisService,
@@ -27,7 +27,7 @@ export class MemorySessionService {
       MemorySessionModel.SessionType,
       MemorySessionModel.SessionKey
     >('session-${sessionId}', minutesToSeconds(10));
-    this.redLock = new Redlock([this.redisService.redis], {
+    this.redisLocker = new Redlock([this.redisService.redis], {
       driftFactor: 0.01,
       retryCount: 10,
       retryDelay: 200,
@@ -36,10 +36,7 @@ export class MemorySessionService {
     });
   }
 
-  async onModuleInit() {}
-
   async hydrateFromDB(sessionId: string) {
-    console.log('HYDRATION FROM DB');
     const session = await this.dataSource.getRepository(Session).findOne({
       where: {
         id: sessionId,
@@ -48,18 +45,11 @@ export class MemorySessionService {
     });
 
     if (!session) {
-      return;
+      throw new Error('Session not founded in DB');
     }
 
     await this.hydrateSession(session);
-  }
-
-  async getSession(sessionId: string): Promise<SessionModel.Session> {
-    const session = await this.CACHE_SESSION.get({ sessionId });
-
-    if (!session) await this.hydrateFromDB(sessionId);
-
-    return await this.CACHE_SESSION.get({ sessionId });
+    return session;
   }
 
   async hydrateSeat(params: {
@@ -69,13 +59,16 @@ export class MemorySessionService {
     const { seat, sessionId } = params;
 
     const lockKey = `lock:${sessionId}`;
-    let lock = await this.redLock.acquire([lockKey], 5000);
+    let lock = await this.redisLocker.acquire([lockKey], 5000);
     let startTime = new Date();
     let endTime = new Date();
     try {
-      const cachedSession = await this.getSession(sessionId);
+      let cachedSession = await this.CACHE_SESSION.get({ sessionId });
+
+      if (!cachedSession) cachedSession = await this.hydrateFromDB(sessionId);
 
       const seatIndex = cachedSession.seats.findIndex((s) => s.id === seat.id);
+
       if (seatIndex === -1) {
         return;
       }
@@ -84,6 +77,7 @@ export class MemorySessionService {
       await this.CACHE_SESSION.set({ sessionId }, cachedSession);
     } catch (err) {
       console.error(err);
+      await this.invalidateKey(sessionId);
     } finally {
       await lock.release();
       endTime = new Date();
@@ -93,5 +87,9 @@ export class MemorySessionService {
 
   async hydrateSession(session: SessionModel.Session) {
     await this.CACHE_SESSION.set({ sessionId: session.id }, session);
+  }
+
+  async invalidateKey(sessionId: string) {
+    await this.CACHE_SESSION.deleteKey({ sessionId });
   }
 }

@@ -4,6 +4,7 @@ import { ManagerSessionModel } from './manager.model';
 import { Session } from '../../entities/session.entity';
 import { Seat } from '../../entities/seat.entity';
 import { MemorySessionService } from '../memory/memory-session.service';
+import { SessionModel } from '../../dto/session.model';
 
 @Injectable()
 export class ManagerSessionService {
@@ -13,8 +14,8 @@ export class ManagerSessionService {
   ) {}
 
   async create(
-    body: ManagerSessionModel.CreateSession,
-  ): Promise<ManagerSessionModel.ResponseSession> {
+    body: ManagerSessionModel.Request.CreateSession,
+  ): Promise<SessionModel.Session> {
     const { duration, movie, placements, price, showtime, room } = body;
 
     const data = await this.dataSource.transaction(async (entityManager) => {
@@ -38,7 +39,6 @@ export class ManagerSessionService {
       return {
         ...session,
         seats,
-        placements,
       };
     });
     await this.memory.hydrateSession(data);
