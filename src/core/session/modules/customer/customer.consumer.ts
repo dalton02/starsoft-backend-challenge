@@ -92,16 +92,17 @@ export class CustomerConsumer {
     const { reservationId, seatId, sessionId } = params;
 
     let session = await this.memory.CACHE_SESSION.get({ sessionId });
-    if (!session) session = await this.memory.hydrateFromDB(sessionId); //Possivel erro de não existe no banc
+    if (!session) session = await this.memory.reloadSessionFromDB(sessionId); //Possivel erro de não existe no banc
 
     const seatReserved = session.seats.find((seat) => seat.id === seatId);
 
     if (!seatReserved) {
       throw new Error('Seat does not exist');
     }
-    await this.memory.hydrateSeat({
+    await this.memory.updateSeat({
       sessionId,
-      seat: { ...seatReserved, status: SeatStatus.RESERVED },
+      seatId: seatReserved.id,
+      seat: { status: SeatStatus.RESERVED },
     });
   }
 
@@ -139,10 +140,10 @@ export class CustomerConsumer {
         return { reservation, seat };
       },
     );
-    await this.memory.hydrateSeat({
+    await this.memory.updateSeat({
       sessionId,
+      seatId: seat.id,
       seat: {
-        ...seat,
         currentReservationId: seat.currentReservation?.id ?? null,
       },
     });
@@ -159,7 +160,7 @@ export class CustomerConsumer {
     console.log('\n\n-----------------------------------------------');
 
     let session = await this.memory.CACHE_SESSION.get({ sessionId });
-    if (!session) session = await this.memory.hydrateFromDB(sessionId);
+    if (!session) session = await this.memory.reloadSessionFromDB(sessionId);
 
     const seatReserved = session.seats.find((seat) => seat.id === seatId);
 
@@ -167,9 +168,10 @@ export class CustomerConsumer {
       throw new Error('Seat does not exist');
     }
 
-    await this.memory.hydrateSeat({
+    await this.memory.updateSeat({
       sessionId,
-      seat: { ...seatReserved, status: SeatStatus.HOLDING },
+      seatId: seatReserved.id,
+      seat: { status: SeatStatus.HOLDING },
     });
   }
 }

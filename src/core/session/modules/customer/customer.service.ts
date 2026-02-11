@@ -128,21 +128,7 @@ export class CustomerSessionService {
     params: CustomerModel.Request.GetSession,
   ): Promise<SessionModel.Session> {
     const { sessionId } = params;
-
-    const session = await this.dataSource.getRepository(Session).findOne({
-      where: {
-        id: sessionId,
-      },
-      relations: { seats: { currentReservation: true } },
-    });
-
-    if (!session) {
-      throw new AppErrorNotFound('Sessão não encontrada');
-    }
-    const formattedSession = formatSession(session);
-    await this.memory.hydrateSession(formattedSession);
-
-    return formattedSession;
+    return await this.memory.getOrReloadSession(sessionId);
   }
 
   async listSessions(

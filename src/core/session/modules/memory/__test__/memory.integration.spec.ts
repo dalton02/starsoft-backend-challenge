@@ -37,7 +37,7 @@ describe('Memory Concurrency Test', () => {
 
   it('should execute hydrateSeat sequentially due to redis lock', async () => {
     const [timerA, timerB] = await Promise.all([
-      service.hydrateSeat({
+      service.updateSeat({
         sessionId: mockSession.id,
         seat: {
           ...mockSession.seats[0],
@@ -45,7 +45,7 @@ describe('Memory Concurrency Test', () => {
           status: SeatStatus.HOLDING,
         },
       }),
-      service.hydrateSeat({
+      service.updateSeat({
         sessionId: mockSession.id,
         seat: {
           ...mockSession.seats[1],

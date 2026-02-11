@@ -45,7 +45,10 @@ export class ManagerSessionService {
     });
 
     const formattedSession = formatSession(data);
-    await this.memory.hydrateSession(formattedSession);
+    await this.memory.CACHE_SESSION.set(
+      { sessionId: formattedSession.id },
+      formattedSession,
+    );
 
     return formattedSession;
   }

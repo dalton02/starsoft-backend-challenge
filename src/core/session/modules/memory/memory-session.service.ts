@@ -10,6 +10,7 @@ import { DataSource } from 'typeorm';
 import { Session } from '../../entities/session.entity';
 import Redlock from 'redlock';
 import { formatSession } from 'src/utils/functions/format-session';
+import { AppErrorNotFound } from 'src/utils/errors/app-errors';
 
 @Injectable()
 export class MemorySessionService {
@@ -27,6 +28,7 @@ export class MemorySessionService {
       MemorySessionModel.SessionType,
       MemorySessionModel.SessionKey
     >('session-${sessionId}', minutesToSeconds(10));
+
     this.redisLocker = new Redlock([this.redisService.redis], {
       driftFactor: 0.01,
       retryCount: 10,
@@ -36,58 +38,95 @@ export class MemorySessionService {
     });
   }
 
-  async hydrateFromDB(sessionId: string) {
-    const session = await this.dataSource.getRepository(Session).findOne({
-      where: {
-        id: sessionId,
-      },
-      relations: { seats: { currentReservation: true } },
-    });
-
-    if (!session) {
-      throw new Error('Session not founded in DB');
-    }
-
-    const formattedSession = formatSession(session);
-    await this.hydrateSession(formattedSession);
-    return formattedSession;
+  generateLockKey(sessionId: string) {
+    return `lock-session:${sessionId}`;
   }
 
-  async hydrateSeat(params: {
-    sessionId: string;
-    seat: SessionModel.Seat;
-  }): Promise<{ startTime: Date; endTime: Date }> {
-    const { seat, sessionId } = params;
+  async getOrReloadSession(sessionId: string): Promise<SessionModel.Session> {
+    const cached = await this.CACHE_SESSION.get({ sessionId });
 
-    const lockKey = `lock:${sessionId}`;
+    if (cached) {
+      return cached;
+    }
+
+    const session = await this.reloadSessionFromDB(sessionId);
+
+    if (!session) {
+      throw new AppErrorNotFound('Sessão não encontrada');
+    }
+
+    return session;
+  }
+
+  async reloadSessionFromDB(
+    sessionId: string,
+  ): Promise<SessionModel.Session | null> {
+    const lockKey = this.generateLockKey(sessionId);
     let lock = await this.redisLocker.acquire([lockKey], 5000);
+
+    try {
+      const session = await this.dataSource.getRepository(Session).findOne({
+        where: {
+          id: sessionId,
+        },
+        relations: { seats: { currentReservation: true } },
+      });
+
+      if (!session) {
+        throw new Error('Session is invalid');
+      }
+
+      const formattedSession = formatSession(session);
+
+      await this.CACHE_SESSION.set({ sessionId: session.id }, formattedSession);
+
+      return formattedSession;
+    } catch (err) {
+      await this.invalidateKey(sessionId);
+    } finally {
+      await lock.release();
+    }
+    return null;
+  }
+
+  async updateSeat(params: {
+    sessionId: string;
+    seatId: string;
+    seat: Partial<SessionModel.Seat>;
+  }): Promise<{ startTime: Date; endTime: Date }> {
+    const { seat, seatId, sessionId } = params;
+
+    const lockKey = this.generateLockKey(sessionId);
+    let lock = await this.redisLocker.acquire([lockKey], 5000);
+
     let startTime = new Date();
     let endTime = new Date();
+
     try {
       let cachedSession = await this.CACHE_SESSION.get({ sessionId });
 
-      if (!cachedSession) cachedSession = await this.hydrateFromDB(sessionId);
+      if (!cachedSession)
+        cachedSession = await this.reloadSessionFromDB(sessionId);
 
-      const seatIndex = cachedSession.seats.findIndex((s) => s.id === seat.id);
+      const seatIndex = cachedSession.seats.findIndex((s) => s.id === seatId);
 
       if (seatIndex === -1) {
         return;
       }
 
-      cachedSession.seats[seatIndex] = seat;
+      cachedSession.seats[seatIndex] = {
+        ...cachedSession.seats[seatIndex],
+        ...seat,
+      };
+
       await this.CACHE_SESSION.set({ sessionId }, cachedSession);
     } catch (err) {
       console.error(err);
-      await this.invalidateKey(sessionId);
     } finally {
       await lock.release();
       endTime = new Date();
     }
     return { startTime, endTime };
-  }
-
-  async hydrateSession(session: SessionModel.Session) {
-    await this.CACHE_SESSION.set({ sessionId: session.id }, session);
   }
 
   async invalidateKey(sessionId: string) {
