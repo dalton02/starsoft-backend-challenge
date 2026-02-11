@@ -35,19 +35,26 @@ export class CustomerSessionService {
   ) {}
 
   async makePayment(params: CustomerModel.Request.ConfirmPayment) {
-    const { reservationId, userId } = params;
+    const { reservationId } = params;
     const { reservation, seat, session } = await this.dataSource.transaction(
       async (entityManager) => {
-        const seat = await entityManager
-          .getRepository(Seat)
-          .createQueryBuilder('seat')
-          .setLock('pessimistic_write')
-          .innerJoinAndSelect('seat.currentReservation', 'reservation')
-          .innerJoinAndSelect('seat.session', 'session')
-          .where('reservation.id = :reservationId', { reservationId })
-          .getOne();
+        const seat = await entityManager.getRepository(Seat).findOne({
+          lock: {
+            mode: 'pessimistic_write',
+          },
+          where: {
+            currentReservation: {
+              id: reservationId,
+            },
+          },
+          relations: {
+            currentReservation: true,
+            session: true,
+          },
+          relationLoadStrategy: 'query',
+        });
 
-        if (!seat.currentReservation) {
+        if (!seat || !seat.currentReservation) {
           throw new AppErrorNotFound('Reserva não foi encontrada');
         }
 
@@ -158,19 +165,22 @@ export class CustomerSessionService {
   ): Promise<ReservationModel.ListReservations> {
     const { limit, page } = params;
 
-    const queryBuilder = this.dataSource
-      .getRepository(Reservation)
-      .createQueryBuilder('reservation')
-      .innerJoinAndSelect('reservation.seat', 'seat')
-      .innerJoinAndSelect('seat.session', 'session')
-
-      .where('reservation."userId" = :userId', { userId });
-
-    queryBuilder.where('reservation.status = :status', {
-      status: PaymentStatus.APPROVED,
-    });
-
-    const [reservations, total] = await queryBuilder.getManyAndCount();
+    const [reservations, total] = await Promise.all([
+      this.dataSource.getRepository(Reservation).find({
+        relations: {
+          seat: { session: true },
+        },
+        where: {
+          status: PaymentStatus.APPROVED,
+          user: {
+            id: userId,
+          },
+        },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.dataSource.getRepository(Session).count(),
+    ]);
 
     const data = reservations.map((data) => {
       const { seat, ...reservation } = data;

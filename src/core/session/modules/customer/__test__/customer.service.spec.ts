@@ -76,23 +76,11 @@ describe('Unit Test Customer Service', () => {
 
   it('should throw if reservation not found', async () => {
     CustomerServiceUnitMocks.EntityManager.getRepository.mockReturnValue({
-      createQueryBuilder: () => ({
-        setLock: () => ({
-          innerJoinAndSelect: () => ({
-            innerJoinAndSelect: () => ({
-              where: () => ({
-                getOne: async () => ({
-                  currentReservation: null,
-                }),
-              }),
-            }),
-          }),
-        }),
-      }),
+      findOne: jest.fn().mockReturnValue(null),
     });
 
     await expect(
-      service.makePayment({ reservationId: 'r1', userId: 'u1' }),
+      service.makePayment({ reservationId: 'r1' }),
     ).rejects.toBeInstanceOf(AppErrorNotFound);
   });
 
@@ -108,21 +96,11 @@ describe('Unit Test Customer Service', () => {
     };
 
     CustomerServiceUnitMocks.EntityManager.getRepository.mockReturnValue({
-      createQueryBuilder: () => ({
-        setLock: () => ({
-          innerJoinAndSelect: () => ({
-            innerJoinAndSelect: () => ({
-              where: () => ({
-                getOne: async () => seat,
-              }),
-            }),
-          }),
-        }),
-      }),
+      findOne: jest.fn().mockReturnValue(seat),
     });
 
     await expect(
-      service.makePayment({ reservationId: 'r1', userId: 'u1' }),
+      service.makePayment({ reservationId: 'r1' }),
     ).rejects.toBeInstanceOf(AppErrorBadRequest);
   });
 
@@ -138,22 +116,11 @@ describe('Unit Test Customer Service', () => {
     };
 
     CustomerServiceUnitMocks.EntityManager.getRepository.mockReturnValue({
-      createQueryBuilder: () => ({
-        setLock: () => ({
-          innerJoinAndSelect: () => ({
-            innerJoinAndSelect: () => ({
-              where: () => ({
-                getOne: async () => seat,
-              }),
-            }),
-          }),
-        }),
-      }),
+      findOne: jest.fn().mockReturnValue(seat),
     });
 
     await service.makePayment({
       reservationId: 'r1',
-      userId: 'u1',
     });
 
     expect(seat.status).toBe(SeatStatus.RESERVED);

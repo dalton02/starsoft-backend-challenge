@@ -14,7 +14,6 @@ export class RedisService {
     });
 
     this.logger = new Logger(RedisService.name);
-    this.redis.flushall();
   }
 
   generateCache<Content, Keys extends Record<string, string | number>>(
@@ -34,7 +33,6 @@ export class RedisCache<Content, Keys extends Record<string, string | number>> {
   private redis: Redis;
   private expiration: number;
   private keyTemplate: string;
-  private prefix: string;
   private logger: Logger;
 
   constructor(
@@ -48,7 +46,6 @@ export class RedisCache<Content, Keys extends Record<string, string | number>> {
     this.keyTemplate = keyTemplate;
     this.logger = logger;
   }
-
   private buildKey(params: Keys): string {
     const key = this.keyTemplate.replace(
       /\$\{(\w+)\}/g,
@@ -60,7 +57,7 @@ export class RedisCache<Content, Keys extends Record<string, string | number>> {
       },
     );
 
-    return `${this.prefix}${key}`;
+    return `${key}`;
   }
 
   async set(

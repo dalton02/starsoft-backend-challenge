@@ -10,8 +10,10 @@ import { MockCustomer } from '../__mocks__/customer.mocks';
 import { Session } from 'src/core/session/entities/session.entity';
 import { MemorySessionService } from '../../memory/memory-session.service';
 import { Seat } from 'src/core/session/entities/seat.entity';
-import { CustomerConsumer } from '../customer.consumer';
+import { CustomerMessageHandler } from '../messager/customer.handlers';
 import { CustomerServiceUnitMocks } from '../__mocks__/functions.mocks';
+import { CustomerMessagerQueues } from '../messager/customer.provider';
+import { wait } from 'src/utils/functions/time';
 
 describe('Customer Integration Test', () => {
   let service: CustomerSessionService;
@@ -69,12 +71,13 @@ describe('Customer Integration Test', () => {
           provide: DataSource,
           useValue: dataSourceProviderTest,
         },
-        CustomerConsumer,
+        CustomerMessageHandler,
+        CustomerMessagerQueues,
       ],
     }).compile();
     service = module.get(CustomerSessionService);
     datasource = module.get(DataSource);
-    await module.get(CustomerConsumer).onModuleInit();
+    await module.get(CustomerMessagerQueues).onModuleInit();
   });
 
   beforeEach(async () => {
@@ -99,7 +102,6 @@ describe('Customer Integration Test', () => {
     const rejected = results.filter((r) => r.status === 'rejected');
 
     expect(fulfilled).toHaveLength(1);
-
     expect(rejected).toHaveLength(trys - 1);
   });
 
@@ -111,13 +113,14 @@ describe('Customer Integration Test', () => {
       userId: MockCustomer.userOne.id,
     });
 
-    const session = await service.getSession({
-      sessionId: MockCustomer.session.id,
+    const seat = await dataSourceProviderTest.getRepository(Seat).findOne({
+      where: {
+        id: seatId,
+      },
+      relations: { currentReservation: true },
     });
 
-    const seat = session.seats.find((s) => s.id === seatId);
-
     expect(seat.status).toBe(SeatStatus.HOLDING);
-    expect(seat.currentReservationId).toBe(bookId);
+    expect(seat.currentReservation.id).toBe(bookId);
   });
 });

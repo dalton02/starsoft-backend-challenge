@@ -70,10 +70,7 @@ export class CustomerSessionController {
     name: 'Pay the reservation',
   })
   @Put('/pay/:reservationId')
-  async pay(
-    @Param('reservationId') reservationId: string,
-    @UserId() userId: string,
-  ) {
-    return await this.service.makePayment({ userId, reservationId });
+  async pay(@Param('reservationId') reservationId: string) {
+    return await this.service.makePayment({ reservationId });
   }
 }

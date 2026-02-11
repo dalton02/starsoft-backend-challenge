@@ -22,9 +22,6 @@ export namespace CustomerModel {
     export class ConfirmPayment {
       @ApiProperty()
       reservationId: string;
-
-      @ApiProperty()
-      userId: string;
     }
 
     export class GetSession {

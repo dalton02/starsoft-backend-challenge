@@ -39,6 +39,7 @@ describe('Memory Concurrency Test', () => {
     const [timerA, timerB] = await Promise.all([
       service.updateSeat({
         sessionId: mockSession.id,
+        seatId: mockSession.seats[0].id,
         seat: {
           ...mockSession.seats[0],
           placement: 'A',
@@ -47,6 +48,7 @@ describe('Memory Concurrency Test', () => {
       }),
       service.updateSeat({
         sessionId: mockSession.id,
+        seatId: mockSession.seats[1].id,
         seat: {
           ...mockSession.seats[1],
           placement: 'B',
