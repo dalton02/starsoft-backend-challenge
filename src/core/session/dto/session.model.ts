@@ -12,6 +12,9 @@ export namespace SessionModel {
 
     @ApiProperty({ enum: SeatStatus })
     status: SeatStatus;
+
+    @ApiProperty()
+    currentReservationId: string | null;
   }
 
   export class Session {

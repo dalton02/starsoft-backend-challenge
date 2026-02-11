@@ -9,10 +9,10 @@ import { getMilliseconds, minutesToSeconds } from 'date-fns';
 import { DataSource } from 'typeorm';
 import { Session } from '../../entities/session.entity';
 import Redlock from 'redlock';
+import { formatSession } from 'src/utils/functions/format-session';
 
 @Injectable()
 export class MemorySessionService {
-  MAX_PAYMENT_TIMEOUT_SECONDS = 30;
   CACHE_SESSION: RedisCache<
     MemorySessionModel.SessionType,
     MemorySessionModel.SessionKey
@@ -41,15 +41,16 @@ export class MemorySessionService {
       where: {
         id: sessionId,
       },
-      relations: { seats: true },
+      relations: { seats: { currentReservation: true } },
     });
 
     if (!session) {
       throw new Error('Session not founded in DB');
     }
 
-    await this.hydrateSession(session);
-    return session;
+    const formattedSession = formatSession(session);
+    await this.hydrateSession(formattedSession);
+    return formattedSession;
   }
 
   async hydrateSeat(params: {

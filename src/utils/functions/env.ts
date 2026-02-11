@@ -9,4 +9,5 @@ export const niceEnv = cleanEnv(process.env, {
   TOKEN_DURATION: num(),
   JWT_SECRET: str(),
   RABBIT_URL: str(),
+  MAX_PAYMENT_TIMEOUT_SECONDS: num(),
 });

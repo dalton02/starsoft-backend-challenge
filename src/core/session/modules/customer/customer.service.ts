@@ -24,6 +24,8 @@ import { PaymentStatus } from '../../enums/payment.enum';
 import { SessionModel } from '../../dto/session.model';
 import { MemorySessionService } from '../memory/memory-session.service';
 import { ReservationModel } from '../../dto/reservation.model';
+import { formatSession } from 'src/utils/functions/format-session';
+import { niceEnv } from 'src/utils/functions/env';
 @Injectable()
 export class CustomerSessionService {
   constructor(
@@ -100,10 +102,7 @@ export class CustomerSessionService {
       const reservation = entityManager.create(Reservation, {
         user: { id: userId },
         seat: { id: seatId },
-        expiresAt: addSeconds(
-          new Date(),
-          this.memory.MAX_PAYMENT_TIMEOUT_SECONDS,
-        ),
+        expiresAt: addSeconds(new Date(), niceEnv.MAX_PAYMENT_TIMEOUT_SECONDS),
       });
 
       seat.currentReservation = reservation;
@@ -130,23 +129,20 @@ export class CustomerSessionService {
   ): Promise<SessionModel.Session> {
     const { sessionId } = params;
 
-    const sessionCached = await this.memory.CACHE_SESSION.get({ sessionId });
-    if (sessionCached) return sessionCached;
-
     const session = await this.dataSource.getRepository(Session).findOne({
       where: {
         id: sessionId,
       },
-      relations: { seats: true },
+      relations: { seats: { currentReservation: true } },
     });
 
     if (!session) {
       throw new AppErrorNotFound('Sessão não encontrada');
     }
+    const formattedSession = formatSession(session);
+    await this.memory.hydrateSession(formattedSession);
 
-    await this.memory.hydrateSession(session);
-
-    return session;
+    return formattedSession;
   }
 
   async listSessions(
@@ -157,7 +153,7 @@ export class CustomerSessionService {
     const [sessions, total] = await Promise.all([
       this.dataSource.getRepository(Session).find({
         relations: {
-          seats: true,
+          seats: { currentReservation: true },
         },
         skip: (page - 1) * limit,
         take: limit,
@@ -165,7 +161,9 @@ export class CustomerSessionService {
       this.dataSource.getRepository(Session).count(),
     ]);
 
-    return new PaginatedResponseFactory({ data: sessions, limit, page, total });
+    const data = sessions.map((session) => formatSession(session));
+
+    return new PaginatedResponseFactory({ data, limit, page, total });
   }
 
   async listHistory(
@@ -179,6 +177,7 @@ export class CustomerSessionService {
       .createQueryBuilder('reservation')
       .innerJoinAndSelect('reservation.seat', 'seat')
       .innerJoinAndSelect('seat.session', 'session')
+
       .where('reservation."userId" = :userId', { userId });
 
     if (status) {
@@ -190,6 +189,7 @@ export class CustomerSessionService {
     const data = reservations.map((data) => {
       const { seat, ...reservation } = data;
       const { session, ...reservedSeat } = seat;
+
       return {
         ...reservation,
         reservedSeat,

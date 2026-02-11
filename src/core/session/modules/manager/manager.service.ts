@@ -5,6 +5,7 @@ import { Session } from '../../entities/session.entity';
 import { Seat } from '../../entities/seat.entity';
 import { MemorySessionService } from '../memory/memory-session.service';
 import { SessionModel } from '../../dto/session.model';
+import { formatSession } from 'src/utils/functions/format-session';
 
 @Injectable()
 export class ManagerSessionService {
@@ -32,6 +33,7 @@ export class ManagerSessionService {
           placement,
           session: { id: session.id },
           reservations: [],
+          currentReservation: null,
         });
       });
       await entityManager.save([session, ...seats]);
@@ -41,8 +43,10 @@ export class ManagerSessionService {
         seats,
       };
     });
-    await this.memory.hydrateSession(data);
 
-    return data;
+    const formattedSession = formatSession(data);
+    await this.memory.hydrateSession(formattedSession);
+
+    return formattedSession;
   }
 }

@@ -8,7 +8,7 @@ import { SeatStatus } from 'src/core/session/enums/seat.enum';
 
 describe('Memory Concurrency Test', () => {
   let service: MemorySessionService;
-  beforeEach(async () => {
+  beforeAll(async () => {
     const module = await Test.createTestingModule({
       providers: [
         MemorySessionService,
@@ -22,14 +22,20 @@ describe('Memory Concurrency Test', () => {
     service = module.get(MemorySessionService);
   });
 
-  it('should execute hydrateSeat sequentially due to redis lock', async () => {
+  beforeEach(async () => {
     await service.CACHE_SESSION.set(
       {
         sessionId: mockSession.id,
       },
       mockSession,
     );
+  });
 
+  afterAll(async () => {
+    await service.CACHE_SESSION.deleteKey({ sessionId: mockSession.id });
+  });
+
+  it('should execute hydrateSeat sequentially due to redis lock', async () => {
     const [timerA, timerB] = await Promise.all([
       service.hydrateSeat({
         sessionId: mockSession.id,

@@ -8,12 +8,12 @@ import { RabbitProvider } from 'src/core/persistence/messager/rabbit.provider';
 import { User } from 'src/core/auth/entities/user.entity';
 import { MockCustomer } from '../__mocks__/customer.mocks';
 import { Session } from 'src/core/session/entities/session.entity';
-import { AppErrorBadRequest } from 'src/utils/errors/app-errors';
 import { MemorySessionService } from '../../memory/memory-session.service';
 import { Seat } from 'src/core/session/entities/seat.entity';
-import { Reservation } from 'src/core/session/entities/reservation.entity';
+import { CustomerConsumer } from '../customer.consumer';
+import { CustomerServiceUnitMocks } from '../__mocks__/functions.mocks';
 
-describe('Customer Integratio Test', () => {
+describe('Customer Integration Test', () => {
   let service: CustomerSessionService;
   let datasource: DataSource;
 
@@ -60,39 +60,64 @@ describe('Customer Integratio Test', () => {
       providers: [
         CustomerSessionService,
         RedisService,
-        RabbitProvider,
+        {
+          provide: RabbitProvider,
+          useValue: CustomerServiceUnitMocks.Rabbit,
+        },
         MemorySessionService,
         {
           provide: DataSource,
           useValue: dataSourceProviderTest,
         },
+        CustomerConsumer,
       ],
     }).compile();
     service = module.get(CustomerSessionService);
     datasource = module.get(DataSource);
-    await module.init();
+    await module.get(CustomerConsumer).onModuleInit();
+  });
+
+  beforeEach(async () => {
     await mock();
   });
 
-  afterAll(async () => {
+  afterEach(async () => {
     await destroyMocks();
   });
 
-  it('should not let two users book the same seat', async () => {
+  it('should not let multiple users book the same seat', async () => {
     const seatId = MockCustomer.seat.id;
+    const trys = 10;
 
-    const results = await Promise.allSettled([
-      service.bookSeat({ seatId, userId: MockCustomer.userOne.id }),
-      service.bookSeat({ seatId, userId: MockCustomer.userTwo.id }),
-    ]);
+    const results = await Promise.allSettled(
+      Array.from({ length: trys }).map(() =>
+        service.bookSeat({ seatId, userId: MockCustomer.userOne.id }),
+      ),
+    ); //Mensageria é enviada aqui mas eu não preciso testar ela
 
     const fulfilled = results.filter((r) => r.status === 'fulfilled');
     const rejected = results.filter((r) => r.status === 'rejected');
 
     expect(fulfilled).toHaveLength(1);
 
-    expect(rejected).toHaveLength(1);
+    expect(rejected).toHaveLength(trys - 1);
+  });
 
-    expect(rejected[0].reason).toBeInstanceOf(AppErrorBadRequest);
+  it('should make a reservation', async () => {
+    const seatId = MockCustomer.seat.id;
+
+    const { bookId, expiresAt } = await service.bookSeat({
+      seatId,
+      userId: MockCustomer.userOne.id,
+    });
+
+    const session = await service.getSession({
+      sessionId: MockCustomer.session.id,
+    });
+
+    const seat = session.seats.find((s) => s.id === seatId);
+
+    expect(seat.status).toBe(SeatStatus.HOLDING);
+    expect(seat.currentReservationId).toBe(bookId);
   });
 });

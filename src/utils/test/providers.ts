@@ -32,6 +32,6 @@ export const testProviders = {
   },
   redis: {
     provide: RedisService,
-    useValue: new RedisService('test'),
+    useValue: RedisService,
   },
 } satisfies Record<string, Provider>;

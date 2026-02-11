@@ -14,11 +14,11 @@ import { RabbitProvider } from 'src/core/persistence/messager/rabbit.provider';
 import { SessionModel } from '../../dto/session.model';
 import { MemorySessionService } from '../memory/memory-session.service';
 import { secondsToMilliseconds } from 'date-fns';
+import { niceEnv } from 'src/utils/functions/env';
 
 @Injectable()
 export class CustomerConsumer {
   constructor(
-    private readonly redisService: RedisService,
     private readonly dataSource: DataSource,
     private readonly rabbit: RabbitProvider,
     private readonly memory: MemorySessionService,
@@ -50,7 +50,7 @@ export class CustomerConsumer {
       durable: true,
       arguments: {
         'x-message-ttl': secondsToMilliseconds(
-          this.memory.MAX_PAYMENT_TIMEOUT_SECONDS,
+          niceEnv.MAX_PAYMENT_TIMEOUT_SECONDS,
         ),
         'x-dead-letter-exchange': 'reservation.events',
         'x-dead-letter-routing-key': RabbitQueue.RESERVATION_EXPIRED,
@@ -116,6 +116,10 @@ export class CustomerConsumer {
       async (entityManager) => {
         const seat = await entityManager.findOne(Seat, {
           where: { id: seatId },
+          relations: {
+            currentReservation: true,
+          },
+          relationLoadStrategy: 'query',
           lock: { mode: 'pessimistic_write' },
         });
 
@@ -135,7 +139,13 @@ export class CustomerConsumer {
         return { reservation, seat };
       },
     );
-    await this.memory.hydrateSeat({ sessionId, seat });
+    await this.memory.hydrateSeat({
+      sessionId,
+      seat: {
+        ...seat,
+        currentReservationId: seat.currentReservation?.id ?? null,
+      },
+    });
   }
 
   private async reservationCreated(params: EventReservation) {

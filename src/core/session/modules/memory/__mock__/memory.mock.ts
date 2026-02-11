@@ -5,12 +5,14 @@ export const mockSeatA: SessionModel.Seat = {
   id: 'test-id-seat-A',
   placement: 'SEAT',
   status: SeatStatus.AVAILABLE,
+  currentReservationId: null,
 };
 
 export const mockSeatB: SessionModel.Seat = {
   id: 'test-id-seat-B',
   placement: 'SEAT',
   status: SeatStatus.AVAILABLE,
+  currentReservationId: null,
 };
 export const mockSession: SessionModel.Session = {
   id: 'test-id',

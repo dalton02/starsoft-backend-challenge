@@ -3,9 +3,16 @@ import { Reservation } from '../entities/reservation.entity';
 import { PaymentStatus } from '../enums/payment.enum';
 import { SessionModel } from './session.model';
 import { PaginatedResponseFactory } from 'src/utils/types/default.pagination';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, OmitType } from '@nestjs/swagger';
 
 export namespace ReservationModel {
+  class SeatFormatted extends OmitType(SessionModel.Seat, [
+    'currentReservationId',
+  ]) {}
+  class SessionFormatted extends OmitType(SessionModel.Session, ['seats']) {
+    seats: SeatFormatted[];
+  }
+
   export class ReservationDto {
     @ApiProperty({})
     createdAt: Date;
@@ -15,10 +22,10 @@ export namespace ReservationModel {
     id: string;
     @ApiProperty({})
     payedAt: Date;
-    @ApiProperty({ type: () => SessionModel.Seat })
-    reservedSeat: SessionModel.Seat;
-    @ApiProperty({ type: () => SessionModel.Session })
-    session: SessionModel.Session;
+    @ApiProperty({ type: () => SeatFormatted })
+    reservedSeat: SeatFormatted;
+    @ApiProperty({ type: () => SessionFormatted })
+    session: SessionFormatted;
     @ApiProperty({ enum: PaymentStatus })
     status: PaymentStatus;
   }
