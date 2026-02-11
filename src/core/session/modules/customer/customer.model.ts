@@ -34,12 +34,7 @@ export namespace CustomerModel {
 
     export class ListSessionsQuery extends PaginationDto {}
 
-    export class ListReservationsQuery extends PaginationDto {
-      @ApiProperty({ enum: PaymentStatus, example: PaymentStatus.APPROVED })
-      @IsOptional()
-      @IsEnum(PaymentStatus)
-      status?: PaymentStatus;
-    }
+    export class ListReservationsQuery extends PaginationDto {}
   }
 
   export namespace Response {

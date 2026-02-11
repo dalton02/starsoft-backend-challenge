@@ -28,6 +28,7 @@ export class CustomerSessionController {
 
   @Doc({
     name: 'List reservations history',
+    description: 'Shows all seats that haven been buyed by the user',
     response: ReservationModel.ListReservations,
   })
   @Get('/list-history')

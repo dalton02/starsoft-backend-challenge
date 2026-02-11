@@ -170,7 +170,7 @@ export class CustomerSessionService {
     params: CustomerModel.Request.ListReservationsQuery,
     userId: string,
   ): Promise<ReservationModel.ListReservations> {
-    const { limit, page, status } = params;
+    const { limit, page } = params;
 
     const queryBuilder = this.dataSource
       .getRepository(Reservation)
@@ -180,9 +180,9 @@ export class CustomerSessionService {
 
       .where('reservation."userId" = :userId', { userId });
 
-    if (status) {
-      queryBuilder.where('reservation.status = :status', { status });
-    }
+    queryBuilder.where('reservation.status = :status', {
+      status: PaymentStatus.APPROVED,
+    });
 
     const [reservations, total] = await queryBuilder.getManyAndCount();
 
