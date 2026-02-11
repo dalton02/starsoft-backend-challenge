@@ -36,7 +36,7 @@ export class AppDoc {
     });
 
     this.app.use(
-      '/docs',
+      '/api-docs',
       apiReference({
         layout: 'modern',
         theme: 'mars',

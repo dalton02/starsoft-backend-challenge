@@ -5,9 +5,6 @@ import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
 import { ValidationFactory } from './utils/errors/errors-validation';
 import { ResponseInterceptor } from './utils/interceptors/response.interceptor';
 import { AppErrorFilter } from './utils/errors/errors.filter';
-import { Transport } from '@nestjs/microservices';
-import { niceEnv } from './utils/functions/env';
-import { RabbitQueue } from './utils/types/rabbit';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
