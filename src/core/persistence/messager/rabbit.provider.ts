@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { type Channel } from 'amqplib';
 import amqp from 'amqplib';
 import { secondsToMilliseconds } from 'date-fns';
-import { isRetryableError } from 'src/utils/errors/custom-errors';
+
 import { niceEnv } from 'src/utils/functions/env';
 import { wait } from 'src/utils/functions/time';
 import {
