@@ -8,6 +8,7 @@ import {
   IsNumber,
   IsString,
 } from 'class-validator';
+import { AppErrorBadRequest } from 'src/utils/errors/app-errors';
 
 export namespace ManagerSessionModel {
   export namespace Request {
@@ -22,11 +23,19 @@ export namespace ManagerSessionModel {
       @IsString()
       room: string;
 
-      @ApiProperty({ example: ['A12', 'B12'] })
+      @ApiProperty({
+        example: ['A1', 'B1', 'C1', 'D1', 'A2', 'B2', 'C2', 'D2', 'A3', 'B3'],
+      })
       @IsArray()
       @IsString({ each: true })
       @IsNotEmpty({ each: true })
-      @Transform((d) => Array.from(new Set(d.value)))
+      @Transform((d) => {
+        const data = Array.from(new Set(d.value));
+        if (data.length < 16) {
+          throw new AppErrorBadRequest('Minimo de assentos na criação é 16');
+        }
+        return data;
+      })
       placements: string[];
 
       @ApiProperty({ description: 'In cents' })

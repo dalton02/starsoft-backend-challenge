@@ -65,7 +65,7 @@ export class CustomerMessageHandler {
     const { reservationId, seatId, sessionId } = params;
 
     console.log('-----------------------------------------------\n\n');
-    console.log('TEMPO LIMITE ESTOURADO, VERIFICANDO RESERVA');
+    console.log('TTL EXPIRED, CHECKING YOUR RESERVATION');
     console.log('\n\n-----------------------------------------------');
 
     const { reservation, seat } = await this.dataSource.transaction(
@@ -98,7 +98,7 @@ export class CustomerMessageHandler {
 
     if (reservation.status === ReservationStatus.APPROVED) {
       console.log('-----------------------------------------------\n\n');
-      console.log('SUA RESERVA ESTÁ CONFIRMADA AQUI, PARABÉNS');
+      console.log('YOUR RESERVATION IS VALID!!!');
       console.log('\n\n-----------------------------------------------');
     }
 
@@ -114,7 +114,6 @@ export class CustomerMessageHandler {
     console.log(
       'IT IS TIME TO PAY FOR YOUR RESERVATION, YOU HAVE 30 SECONDS BEFORE WE STOP HOLDING THE SEAT FOR YOU\n',
     );
-    console.log('ID RESERVATION: ' + reservationId);
     console.log('\n\n-----------------------------------------------');
 
     let session = await this.memory.CACHE_SESSION.get({ sessionId });
