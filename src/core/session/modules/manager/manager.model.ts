@@ -46,15 +46,6 @@ export namespace ManagerSessionModel {
       @IsArray()
       @IsString({ each: true })
       @IsNotEmpty({ each: true })
-      @Transform((d) => {
-        const data = Array.from(new Set(d.value));
-        if (data.length < 16) {
-          throw new AppErrorBadRequest(
-            'Minimo de assentos na criação é 16 (evite inserir assentos duplicados)',
-          );
-        }
-        return data;
-      })
       placements: string[];
 
       @ApiProperty({ description: 'In cents' })

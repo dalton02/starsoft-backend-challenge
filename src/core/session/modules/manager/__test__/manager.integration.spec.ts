@@ -28,7 +28,7 @@ describe('Manager Integration Test', () => {
   });
 
   it('should create a session and update in redis', async () => {
-    const session = await service.create(ManagerServiceMock.bodySession);
+    const session = await service.create(ManagerServiceMock.correctBodySession);
 
     const cachedSession = await memory.CACHE_SESSION.get({
       sessionId: session.id,

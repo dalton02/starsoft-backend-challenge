@@ -21,6 +21,7 @@ import { formatSession } from 'src/utils/functions/format-session';
 import { niceEnv } from 'src/utils/functions/env';
 import { Sale } from '../../entities/sale.entity';
 import { SaleModel } from '../../dto/sale.model';
+import { Throttle } from '@nestjs/throttler';
 @Injectable()
 export class CustomerSessionService {
   constructor(

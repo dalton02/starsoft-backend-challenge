@@ -20,6 +20,8 @@ import { UserId } from 'src/utils/decorators/user-id.decorator';
 import { CustomerModel } from './customer.model';
 import { SessionModel } from '../../dto/session.model';
 import { ReservationModel } from '../../dto/reservation.model';
+import { Throttle } from '@nestjs/throttler';
+import { hoursToMilliseconds, minutesToMilliseconds } from 'date-fns';
 
 @Controller('customer/')
 @UseInterceptors(ClassSerializerInterceptor)
@@ -63,6 +65,12 @@ export class CustomerSessionController {
     return await this.service.getSession({ sessionId });
   }
 
+  //Rate limit especifico para rota de reserva, já que ela é a mais sensivel
+  //Valores altos apenas para testes
+  @Throttle({
+    short: { limit: 20, ttl: minutesToMilliseconds(1) },
+    medium: { limit: 200, ttl: hoursToMilliseconds(24) },
+  })
   @Doc({
     name: 'Book Seat',
     description: 'Trys to make a reservation of the seat',

@@ -6,6 +6,7 @@ import { Seat } from '../../entities/seat.entity';
 import { MemorySessionService } from '../memory/memory-session.service';
 import { SessionModel } from '../../dto/session.model';
 import { formatSession } from 'src/utils/functions/format-session';
+import { AppErrorBadRequest } from 'src/utils/errors/app-errors';
 
 @Injectable()
 export class ManagerSessionService {
@@ -19,6 +20,13 @@ export class ManagerSessionService {
   ): Promise<SessionModel.Session> {
     const { duration, movie, placements, price, showtime, room } = body;
 
+    const placementsWithoutDuplicates = Array.from(new Set(placements));
+    if (placementsWithoutDuplicates.length < 16) {
+      throw new AppErrorBadRequest(
+        'Minimo de assentos na criação é 16 (evite inserir assentos duplicados)',
+      );
+    }
+
     const data = await this.dataSource.transaction(async (entityManager) => {
       const session = entityManager.create(Session, {
         duration,
@@ -28,7 +36,7 @@ export class ManagerSessionService {
         showtime,
       });
 
-      const seats = placements.map((placement) => {
+      const seats = placementsWithoutDuplicates.map((placement) => {
         return entityManager.create(Seat, {
           placement,
           session: { id: session.id },
