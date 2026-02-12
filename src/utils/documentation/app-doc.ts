@@ -26,9 +26,6 @@ export class AppDoc {
 
     this.document = SwaggerModule.createDocument(this.app, config);
 
-    // salvando o arquivo em openapi.json para o APIDOC do seller
-    fs.writeFileSync('./openapi.json', JSON.stringify(this.document, null, 2));
-
     this.parseGroups();
 
     this.app.getHttpAdapter().get('/openapi.json', (_req, res) => {
