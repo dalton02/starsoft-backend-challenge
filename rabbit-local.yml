@@ -1,3 +1,4 @@
+# USADO PARA TESTAR LOCALMENTE, FAVOR IGNORAR
 services:
   rabbitmq:
     image: heidiks/rabbitmq-delayed-message-exchange:4.2.0-management
@@ -13,7 +14,7 @@ services:
     ports:
       - 5672:5672
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      test: ['CMD', 'rabbitmq-diagnostics', 'ping']
       interval: 30s
       timeout: 10s
       retries: 5

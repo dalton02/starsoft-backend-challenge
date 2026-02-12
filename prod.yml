@@ -1,32 +1,32 @@
 services:
-  app:
+  prod-app:
     build:
       context: .
       dockerfile: Dockerfile.prod
     depends_on:
-      db:
+      prod-db:
         condition: service_healthy
-      rabbitmq:
+      prod-rabbitmq:
         condition: service_healthy
-      redis:
+      prod-redis:
         condition: service_healthy
     environment:
-      RABBIT_URL: amqp://admin:admin123@rabbitmq:5672/
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/appdb
-      REDIS_URL: redis://redis:6379
+      RABBIT_URL: amqp://admin:admin123@prod-rabbitmq:5672/
+      DATABASE_URL: postgresql://postgres:postgres@prod-db:5432/movies-manager
+      REDIS_URL: redis://prod-redis:6379
     ports:
       - '3000:3000'
     networks:
-      - app-network
+      - starsoft-prod-network
 
-  db:
+  prod-db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: appdb
+      POSTGRES_DB: movies-manager
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_starsoft_prod_data:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U postgres']
@@ -34,11 +34,10 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - app-network
+      - starsoft-prod-network
 
-  rabbitmq:
+  prod-rabbitmq:
     image: heidiks/rabbitmq-delayed-message-exchange:4.2.0-management
-    container_name: rabbitmq
     hostname: rabbitmq
     restart: unless-stopped
     environment:
@@ -46,35 +45,34 @@ services:
       - RABBITMQ_DEFAULT_PASS=admin123
       - RABBITMQ_DEFAULT_VHOST=/
     volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
+      - rabbitmq_starsoft_prod_data:/var/lib/rabbitmq
     healthcheck:
       test: ['CMD', 'rabbitmq-diagnostics', 'ping']
       interval: 30s
       timeout: 10s
       retries: 5
     networks:
-      - app-network
-  redis:
+      - starsoft-prod-network
+  prod-redis:
     image: redis:8.4.1-trixie
-    container_name: redis
     restart: unless-stopped
     volumes:
-      - redis_data:/data
+      - redis_starsoft_prod_data:/data
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - app-network
+      - starsoft-prod-network
 volumes:
-  rabbitmq_data:
+  rabbitmq_starsoft_prod_data:
     driver: local
-  postgres_data:
+  postgres_starsoft_prod_data:
     driver: local
-  redis_data:
+  redis_starsoft_prod_data:
     driver: local
 
 networks:
-  app-network:
+  starsoft-prod-network:
     driver: bridge
