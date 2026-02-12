@@ -1,8 +1,8 @@
 import { Controller, Inject, Injectable, Logger } from '@nestjs/common';
 import {
   EventReservation,
+  RabbitExchange,
   RabbitQueue,
-  type RabbitEvent,
 } from 'src/utils/types/rabbit';
 import { DataSource } from 'typeorm';
 import { Seat } from '../../entities/seat.entity';
@@ -11,7 +11,6 @@ import { ReservationStatus } from '../../enums/reservation.enum';
 import { SeatStatus } from '../../enums/seat.enum';
 import { RabbitProvider } from 'src/core/persistence/messager/rabbit.provider';
 import { MemorySessionService } from '../memory/memory-session.service';
-import { RetryableError } from 'src/utils/errors/custom-errors';
 
 @Injectable()
 export class SessionMessageHandler {
@@ -48,7 +47,7 @@ export class SessionMessageHandler {
     const { reservationId, seatId, sessionId } = params;
 
     console.log('-----------------------------------------------\n\n');
-    console.log('LIBERANDO ASSENTO PARA OUTRAS PESSOAS COMPRAREM');
+    console.log('RELEASING SEAT ', seatId, ' FOR OTHER USERS');
     console.log('\n\n-----------------------------------------------');
 
     await this.memory.updateSeat({
@@ -103,7 +102,11 @@ export class SessionMessageHandler {
     }
 
     if (reservation.status === ReservationStatus.CANCELLED) {
-      await this.rabbit.publish(RabbitQueue.SEAT_RELEASE, params);
+      await this.rabbit.publish(
+        RabbitExchange.RESERVATION_EVENTS,
+        RabbitQueue.SEAT_RELEASE,
+        params,
+      );
     }
   }
 
@@ -133,6 +136,10 @@ export class SessionMessageHandler {
       });
     }
 
-    await this.rabbit.publish(RabbitQueue.RESERVATION_DELAY, payload);
+    await this.rabbit.publish(
+      RabbitExchange.RESERVATION_EVENTS,
+      RabbitQueue.RESERVATION_DELAY,
+      payload,
+    );
   }
 }

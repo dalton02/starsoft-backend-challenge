@@ -19,7 +19,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt-strategy') {
     payload: AuthModel.TokenPayload,
   ): Promise<AuthModel.UserRequest> {
     const userInfo = await this.authService.gatherUserInfo(payload.sub);
-    console.log('passando pelo guard');
+
     return {
       id: userInfo.id,
       role: userInfo.role,

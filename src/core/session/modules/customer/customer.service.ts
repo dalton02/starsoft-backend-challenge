@@ -11,7 +11,11 @@ import { Reservation } from '../../entities/reservation.entity';
 import { Session } from '../../entities/session.entity';
 import { PaginatedResponseFactory } from 'src/utils/types/default.pagination';
 import { addSeconds, formatDate } from 'date-fns';
-import { RabbitQueue, type EventReservation } from 'src/utils/types/rabbit';
+import {
+  RabbitExchange,
+  RabbitQueue,
+  type EventReservation,
+} from 'src/utils/types/rabbit';
 import { RabbitProvider } from 'src/core/persistence/messager/rabbit.provider';
 import { ReservationStatus } from '../../enums/reservation.enum';
 import { SessionModel } from '../../dto/session.model';
@@ -74,11 +78,15 @@ export class CustomerSessionService {
         };
       },
     );
-    await this.rabbit.publish(RabbitQueue.PAYMENT_CONFIRMED, {
-      reservationId,
-      seatId: seat.id,
-      sessionId: session.id,
-    });
+    await this.rabbit.publish(
+      RabbitExchange.RESERVATION_EVENTS,
+      RabbitQueue.PAYMENT_CONFIRMED,
+      {
+        reservationId,
+        seatId: seat.id,
+        sessionId: session.id,
+      },
+    );
   }
 
   async bookSeat(
@@ -129,7 +137,11 @@ export class CustomerSessionService {
       sessionId: data.sessionId,
     };
 
-    await this.rabbit.publish(RabbitQueue.RESERVATION_CREATED, payload);
+    await this.rabbit.publish(
+      RabbitExchange.RESERVATION_EVENTS,
+      RabbitQueue.RESERVATION_CREATED,
+      payload,
+    );
 
     return {
       bookId: data.bookId,

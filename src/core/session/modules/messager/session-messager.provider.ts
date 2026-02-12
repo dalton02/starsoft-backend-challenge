@@ -2,6 +2,7 @@ import { Controller, Inject, Injectable, Logger } from '@nestjs/common';
 import { RedisService } from 'src/core/persistence/database/redis/redis.service';
 import {
   EventReservation,
+  RabbitExchange,
   RabbitQueue,
   type RabbitEvent,
 } from 'src/utils/types/rabbit';
@@ -14,7 +15,6 @@ import { SessionMessageHandler } from './session-messager.handlers';
 @Injectable()
 export class SessionMessagerQueues {
   constructor(
-    private readonly dataSource: DataSource,
     private readonly rabbit: RabbitProvider,
     private readonly handler: SessionMessageHandler,
   ) {}
@@ -26,7 +26,7 @@ export class SessionMessagerQueues {
 
   private async prepareQueues() {
     await this.rabbit.channel.assertExchange(
-      'reservation.events',
+      RabbitExchange.RESERVATION_EVENTS,
       'x-delayed-message',
       {
         durable: true,
@@ -58,37 +58,37 @@ export class SessionMessagerQueues {
         'x-message-ttl': secondsToMilliseconds(
           niceEnv.MAX_PAYMENT_TIMEOUT_SECONDS,
         ),
-        'x-dead-letter-exchange': 'reservation.events',
+        'x-dead-letter-exchange': RabbitExchange.RESERVATION_EVENTS,
         'x-dead-letter-routing-key': RabbitQueue.RESERVATION_EXPIRED,
       },
     });
 
     await this.rabbit.channel.bindQueue(
       RabbitQueue.RESERVATION_EXPIRED,
-      'reservation.events',
+      RabbitExchange.RESERVATION_EVENTS,
       RabbitQueue.RESERVATION_EXPIRED,
     );
 
     await this.rabbit.channel.bindQueue(
       RabbitQueue.RESERVATION_CREATED,
-      'reservation.events',
+      RabbitExchange.RESERVATION_EVENTS,
       RabbitQueue.RESERVATION_CREATED,
     );
     await this.rabbit.channel.bindQueue(
       RabbitQueue.RESERVATION_DELAY,
-      'reservation.events',
+      RabbitExchange.RESERVATION_EVENTS,
       RabbitQueue.RESERVATION_DELAY,
     );
 
     await this.rabbit.channel.bindQueue(
       RabbitQueue.PAYMENT_CONFIRMED,
-      'reservation.events',
+      RabbitExchange.RESERVATION_EVENTS,
       RabbitQueue.PAYMENT_CONFIRMED,
     );
 
     await this.rabbit.channel.bindQueue(
       RabbitQueue.SEAT_RELEASE,
-      'reservation.events',
+      RabbitExchange.RESERVATION_EVENTS,
       RabbitQueue.SEAT_RELEASE,
     );
   }

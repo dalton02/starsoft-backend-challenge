@@ -4,7 +4,13 @@ import amqp from 'amqplib';
 import { isRetryableError } from 'src/utils/errors/custom-errors';
 import { niceEnv } from 'src/utils/functions/env';
 import { wait } from 'src/utils/functions/time';
-import { RabbitEvent, RabbitQueue } from 'src/utils/types/rabbit';
+import {
+  RabbitEvent,
+  RabbitExchange,
+  RabbitExchangeType,
+  RabbitQueue,
+  RabbitQueueType,
+} from 'src/utils/types/rabbit';
 
 @Injectable()
 export class RabbitProvider {
@@ -19,27 +25,35 @@ export class RabbitProvider {
     this.logger = new Logger();
     this.logger.log('RABBIT MQ CONNECTED');
 
-    await this.channel.assertExchange('dlq.errors', 'direct', {
+    await this.channel.assertExchange(RabbitExchange.DLQ_ERRORS, 'direct', {
       durable: true,
     });
 
-    await this.channel.assertQueue('DLQ.ERROR', {
+    await this.channel.assertQueue(RabbitQueue.DLQ_ERROR, {
       durable: true,
     });
-    await this.channel.bindQueue('DLQ.ERROR', 'dlq.errors', 'DLQ.ERROR');
+    await this.channel.bindQueue(
+      RabbitQueue.DLQ_ERROR,
+      RabbitExchange.DLQ_ERRORS,
+      RabbitQueue.DLQ_ERROR,
+    );
 
-    await this.channel.consume('DLQ.ERROR', async (msg) => {
+    await this.channel.consume(RabbitQueue.DLQ_ERROR, async (msg) => {
       console.log('MENSAGEM FALHOU MESMO APOS RETRYS COM BACKOFF EXPONENCIAL');
       this.channel.ack(msg);
     });
   }
 
-  async publish(queue: RabbitQueue, payload: RabbitEvent) {
-    this.channel.sendToQueue(queue, Buffer.from(JSON.stringify(payload)));
+  async publish(
+    exchange: RabbitExchangeType,
+    queue: RabbitQueueType,
+    payload: RabbitEvent,
+  ) {
+    this.channel.publish(exchange, queue, Buffer.from(JSON.stringify(payload)));
   }
 
   async consume(
-    queue: RabbitQueue,
+    queue: RabbitQueueType,
     fn: (payload: RabbitEvent) => Promise<void>,
     options?: amqp.Options.Consume,
   ) {
@@ -53,17 +67,26 @@ export class RabbitProvider {
           this.channel.ack(msg);
         } catch (err) {
           if (retrys >= this.MAX_RETRYS) {
-            this.channel.publish('dlq.errors', 'DLQ.ERROR', msg.content);
+            this.channel.publish(
+              RabbitExchange.DLQ_ERRORS,
+              RabbitQueue.DLQ_ERROR,
+              msg.content,
+            );
             this.channel.ack(msg);
             return;
           }
-          this.channel.publish('reservation.events', queue, msg.content, {
-            persistent: true,
-            headers: {
-              'x-delay': Math.pow(2, retrys + 1),
-              'retry-count': retrys + 1,
+          this.channel.publish(
+            RabbitExchange.RESERVATION_EVENTS,
+            queue,
+            msg.content,
+            {
+              persistent: true,
+              headers: {
+                'x-delay': Math.pow(2, retrys + 1),
+                'retry-count': retrys + 1,
+              },
             },
-          });
+          );
 
           this.channel.ack(msg);
         }
