@@ -15,7 +15,11 @@ describe('Memory Concurrency Test', () => {
         RedisService,
         {
           provide: DataSource,
-          useValue: dataSource,
+          useValue: {
+            getRepository: jest.fn().mockReturnValue({
+              findOne: jest.fn().mockReturnValue(mockSession),
+            }),
+          },
         },
       ],
     }).compile();
@@ -33,6 +37,25 @@ describe('Memory Concurrency Test', () => {
 
   afterAll(async () => {
     await service.CACHE_SESSION.deleteKey({ sessionId: mockSession.id });
+  });
+
+  it('should not have a race condition between refreshing the whole session and updating specific seat', async () => {
+    const [timerA, timerB] = await Promise.all([
+      service.reloadSessionFromDB(mockSession.id),
+      service.updateSeat({
+        sessionId: mockSession.id,
+        seatId: mockSession.seats[1].id,
+        seat: {
+          ...mockSession.seats[1],
+          placement: 'B',
+          status: SeatStatus.HOLDING,
+        },
+      }),
+    ]);
+
+    const overlap =
+      timerA.startTime < timerB.endTime && timerB.startTime < timerA.endTime;
+    expect(overlap).toBe(false);
   });
 
   it('should execute hydrateSeat sequentially due to redis lock', async () => {

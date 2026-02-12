@@ -38,6 +38,23 @@ export class MemorySessionService {
     });
   }
 
+  private async getSessionFromDB(
+    sessionId: string,
+  ): Promise<SessionModel.Session | null> {
+    const session = await this.dataSource.getRepository(Session).findOne({
+      where: {
+        id: sessionId,
+      },
+      relations: { seats: { currentReservation: true } },
+    });
+
+    if (!session) {
+      throw new Error('Session is invalid');
+    }
+    const formattedSession = formatSession(session);
+    return formattedSession;
+  }
+
   generateLockKey(sessionId: string) {
     return `lock-session:${sessionId}`;
   }
@@ -49,7 +66,7 @@ export class MemorySessionService {
       return cached;
     }
 
-    const session = await this.reloadSessionFromDB(sessionId);
+    const { session } = await this.reloadSessionFromDB(sessionId);
 
     if (!session) {
       throw new AppErrorNotFound('Sessão não encontrada');
@@ -58,35 +75,28 @@ export class MemorySessionService {
     return session;
   }
 
-  async reloadSessionFromDB(
-    sessionId: string,
-  ): Promise<SessionModel.Session | null> {
+  async reloadSessionFromDB(sessionId: string): Promise<{
+    startTime: Date;
+    endTime: Date;
+    session: SessionModel.Session;
+  }> {
     const lockKey = this.generateLockKey(sessionId);
     let lock = await this.redisLocker.acquire([lockKey], 5000);
 
+    let startTime = new Date();
+    let endTime = new Date();
+    let session: SessionModel.Session | null;
+
     try {
-      const session = await this.dataSource.getRepository(Session).findOne({
-        where: {
-          id: sessionId,
-        },
-        relations: { seats: { currentReservation: true } },
-      });
-
-      if (!session) {
-        throw new Error('Session is invalid');
-      }
-
-      const formattedSession = formatSession(session);
-
-      await this.CACHE_SESSION.set({ sessionId: session.id }, formattedSession);
-
-      return formattedSession;
+      session = await this.getSessionFromDB(sessionId);
+      await this.CACHE_SESSION.set({ sessionId: session.id }, session);
     } catch (err) {
       await this.invalidateKey(sessionId);
     } finally {
       await lock.release();
+      endTime = new Date();
     }
-    return null;
+    return { startTime, endTime, session };
   }
 
   async updateSeat(params: {
@@ -105,8 +115,9 @@ export class MemorySessionService {
     try {
       let cachedSession = await this.CACHE_SESSION.get({ sessionId });
 
-      if (!cachedSession)
-        cachedSession = await this.reloadSessionFromDB(sessionId);
+      if (!cachedSession) {
+        cachedSession = await this.getSessionFromDB(sessionId);
+      }
 
       const seatIndex = cachedSession.seats.findIndex((s) => s.id === seatId);
 

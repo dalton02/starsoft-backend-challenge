@@ -44,6 +44,7 @@ export class CustomerSessionController {
 
   @Doc({
     name: 'List sessions',
+    description: 'Paginated list of the sessions available',
     response: SessionModel.ListSessions,
   })
   @Get('/list-sessions')
@@ -53,6 +54,8 @@ export class CustomerSessionController {
 
   @Doc({
     name: 'Get session',
+    description:
+      'Gets a session in realtime (using redis and the DB is the fallback)',
     response: SessionModel.Session,
   })
   @Get('/session/:sessionId')
@@ -62,6 +65,7 @@ export class CustomerSessionController {
 
   @Doc({
     name: 'Book Seat',
+    description: 'Trys to make a reservation of the seat',
     response: CustomerModel.Response.BookingDto,
   })
   @Post('/book/:seatId')
@@ -74,6 +78,7 @@ export class CustomerSessionController {
 
   @Doc({
     name: 'Pay the reservation',
+    description: 'Pays for the reservation',
   })
   @Put('/pay/:bookId')
   async pay(@Param('bookId') reservationId: string) {

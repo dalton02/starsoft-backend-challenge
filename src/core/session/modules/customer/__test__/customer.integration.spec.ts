@@ -14,7 +14,7 @@ import { CustomerServiceUnitMocks } from '../__mocks__/functions.mocks';
 import { CustomerMessagerQueues } from '../messager/customer.provider';
 import { wait } from 'src/utils/functions/time';
 import dataSource from 'src/database.source';
-import { subSeconds } from 'date-fns';
+import { addSeconds, subSeconds } from 'date-fns';
 import { Reservation } from 'src/core/session/entities/reservation.entity';
 import { CustomerCronJobs } from '../cron/customer.cron';
 
@@ -149,9 +149,29 @@ describe('Customer Integration Test', () => {
         },
       );
     });
+  });
+  it('if cleanup is running, should not delete not expired reservations', async () => {
+    await dataSource.transaction(async (tx) => {
+      const reservation = tx.create(Reservation, {
+        user: { id: MockCustomer.userOne.id },
+        seat: { id: MockCustomer.seat.id },
+        expiresAt: addSeconds(new Date(), 15),
+      });
+
+      await tx.save(reservation);
+
+      await tx.update(
+        Seat,
+        { id: MockCustomer.seat.id },
+        {
+          status: SeatStatus.HOLDING,
+          currentReservation: reservation,
+        },
+      );
+    });
 
     const countCleanUps = await cronJobService.handle();
 
-    expect(countCleanUps).toBe(1);
+    expect(countCleanUps).toBe(0);
   });
 });
