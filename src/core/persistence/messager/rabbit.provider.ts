@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { type Channel } from 'amqplib';
 import amqp from 'amqplib';
+import { secondsToMilliseconds } from 'date-fns';
 import { isRetryableError } from 'src/utils/errors/custom-errors';
 import { niceEnv } from 'src/utils/functions/env';
 import { wait } from 'src/utils/functions/time';
@@ -42,6 +43,12 @@ export class RabbitProvider {
       console.log('MENSAGEM FALHOU MESMO APOS RETRYS COM BACKOFF EXPONENCIAL');
       this.channel.ack(msg);
     });
+
+    await this.publish('RESERVATION.EVENTS', 'PAYMENT.CONFIRMED', {
+      reservationId: '',
+      seatId: '',
+      sessionId: '',
+    });
   }
 
   async publish(
@@ -67,11 +74,7 @@ export class RabbitProvider {
           this.channel.ack(msg);
         } catch (err) {
           if (retrys >= this.MAX_RETRYS) {
-            this.channel.publish(
-              RabbitExchange.DLQ_ERRORS,
-              RabbitQueue.DLQ_ERROR,
-              msg.content,
-            );
+            this.publish('DLQ.ERRORS', 'DLQ.ERROR', msg.content);
             this.channel.ack(msg);
             return;
           }
@@ -82,7 +85,7 @@ export class RabbitProvider {
             {
               persistent: true,
               headers: {
-                'x-delay': Math.pow(2, retrys + 1),
+                'x-delay': secondsToMilliseconds(Math.pow(2, retrys + 1)), //Aqui seria o nosso retry com backoff exponencial.
                 'retry-count': retrys + 1,
               },
             },
