@@ -2,20 +2,21 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
 import { RedisService } from 'src/core/persistence/database/redis/redis.service';
 import { SeatStatus } from 'src/core/session/enums/seat.enum';
-import { CustomerSessionService } from '../customer.service';
 import { RabbitProvider } from 'src/core/persistence/messager/rabbit.provider';
 import { User } from 'src/core/auth/entities/user.entity';
-import { MockCustomer } from '../__mocks__/customer.mocks';
 import { Session } from 'src/core/session/entities/session.entity';
 import { MemorySessionService } from '../../memory/memory-session.service';
 import { Seat } from 'src/core/session/entities/seat.entity';
-import { CustomerServiceUnitMocks } from '../__mocks__/functions.mocks';
+
 import dataSource from 'src/database.source';
+import { addSeconds, subSeconds } from 'date-fns';
+import { Reservation } from 'src/core/session/entities/reservation.entity';
 import { SessionCronService } from '../../cron/session-cron.service';
+import { MockCustomer } from '../../customer/__mocks__/customer.mocks';
+import { CustomerServiceUnitMocks } from '../../customer/__mocks__/functions.mocks';
 
 //Testes não envolvem a mensageria em si devido a serem operações assicronas demoradas
-describe('Customer Integration Test', () => {
-  let service: CustomerSessionService;
+describe('Session CronJOB Integration Test', () => {
   let cronJobService: SessionCronService;
   let datasource: DataSource;
 
@@ -43,7 +44,7 @@ describe('Customer Integration Test', () => {
         });
       });
 
-      const data = await tx.save([userOne, userTwo, session, ...seats]);
+      await tx.save([userOne, userTwo, session, ...seats]);
     });
   }
 
@@ -60,7 +61,6 @@ describe('Customer Integration Test', () => {
     await dataSource.initialize();
     const module = await Test.createTestingModule({
       providers: [
-        CustomerSessionService,
         RedisService,
         {
           provide: RabbitProvider,
@@ -74,7 +74,7 @@ describe('Customer Integration Test', () => {
         SessionCronService,
       ],
     }).compile();
-    service = module.get(CustomerSessionService);
+
     datasource = module.get(DataSource);
     cronJobService = module.get(SessionCronService);
   });
@@ -87,39 +87,53 @@ describe('Customer Integration Test', () => {
     await destroyMocks();
   });
 
-  it('should not let multiple users book the same seat', async () => {
-    const seatId = MockCustomer.seat.id;
-    const trys = 10;
+  it('if messager fails to detect expired reservation after timeout and retrys, application should be able to run a cleanup', async () => {
+    await dataSource.transaction(async (tx) => {
+      const reservation = tx.create(Reservation, {
+        user: { id: MockCustomer.userOne.id },
+        seat: { id: MockCustomer.seat.id },
+        expiresAt: subSeconds(new Date(), 50),
+      });
 
-    const results = await Promise.allSettled(
-      Array.from({ length: trys }).map(() =>
-        service.bookSeat({ seatId, userId: MockCustomer.userOne.id }),
-      ),
-    );
+      await tx.save(reservation);
 
-    const fulfilled = results.filter((r) => r.status === 'fulfilled');
-    const rejected = results.filter((r) => r.status === 'rejected');
+      await tx.update(
+        Seat,
+        { id: MockCustomer.seat.id },
+        {
+          status: SeatStatus.HOLDING,
+          currentReservation: reservation,
+        },
+      );
+    });
 
-    expect(fulfilled).toHaveLength(1);
-    expect(rejected).toHaveLength(trys - 1);
+    const countCleanUps = await cronJobService.handle();
+
+    expect(countCleanUps).toBe(1);
   });
 
-  it('should make a reservation', async () => {
-    const seatId = MockCustomer.seat.id;
+  it('if cleanup is running, should not delete not expired reservations', async () => {
+    await dataSource.transaction(async (tx) => {
+      const reservation = tx.create(Reservation, {
+        user: { id: MockCustomer.userOne.id },
+        seat: { id: MockCustomer.seat.id },
+        expiresAt: addSeconds(new Date(), 15),
+      });
 
-    const { bookId, expiresAt } = await service.bookSeat({
-      seatId,
-      userId: MockCustomer.userOne.id,
+      await tx.save(reservation);
+
+      await tx.update(
+        Seat,
+        { id: MockCustomer.seat.id },
+        {
+          status: SeatStatus.HOLDING,
+          currentReservation: reservation,
+        },
+      );
     });
 
-    const seat = await dataSource.getRepository(Seat).findOne({
-      where: {
-        id: seatId,
-      },
-      relations: { currentReservation: true },
-    });
+    const countCleanUps = await cronJobService.handle();
 
-    expect(seat.status).toBe(SeatStatus.HOLDING);
-    expect(seat.currentReservation.id).toBe(bookId);
+    expect(countCleanUps).toBe(0);
   });
 });

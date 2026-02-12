@@ -5,16 +5,16 @@ import {
   type RabbitEvent,
 } from 'src/utils/types/rabbit';
 import { DataSource } from 'typeorm';
-import { Seat } from '../../../entities/seat.entity';
-import { Reservation } from '../../../entities/reservation.entity';
-import { ReservationStatus } from '../../../enums/reservation.enum';
-import { SeatStatus } from '../../../enums/seat.enum';
+import { Seat } from '../../entities/seat.entity';
+import { Reservation } from '../../entities/reservation.entity';
+import { ReservationStatus } from '../../enums/reservation.enum';
+import { SeatStatus } from '../../enums/seat.enum';
 import { RabbitProvider } from 'src/core/persistence/messager/rabbit.provider';
-import { MemorySessionService } from '../../memory/memory-session.service';
+import { MemorySessionService } from '../memory/memory-session.service';
 import { RetryableError } from 'src/utils/errors/custom-errors';
 
 @Injectable()
-export class CustomerMessageHandler {
+export class SessionMessageHandler {
   constructor(
     private readonly dataSource: DataSource,
     private readonly rabbit: RabbitProvider,

@@ -6,23 +6,17 @@ import {
   type RabbitEvent,
 } from 'src/utils/types/rabbit';
 import { DataSource } from 'typeorm';
-import { Seat } from '../../../entities/seat.entity';
-import { Reservation } from '../../../entities/reservation.entity';
-import { ReservationStatus } from '../../../enums/reservation.enum';
-import { SeatStatus } from '../../../enums/seat.enum';
 import { RabbitProvider } from 'src/core/persistence/messager/rabbit.provider';
-import { SessionModel } from '../../../dto/session.model';
-import { MemorySessionService } from '../../memory/memory-session.service';
 import { secondsToMilliseconds } from 'date-fns';
 import { niceEnv } from 'src/utils/functions/env';
-import { CustomerMessageHandler } from './customer.handlers';
+import { SessionMessageHandler } from './session-messager.handlers';
 
 @Injectable()
-export class CustomerMessagerQueues {
+export class SessionMessagerQueues {
   constructor(
     private readonly dataSource: DataSource,
     private readonly rabbit: RabbitProvider,
-    private readonly handler: CustomerMessageHandler,
+    private readonly handler: SessionMessageHandler,
   ) {}
 
   async onModuleInit() {

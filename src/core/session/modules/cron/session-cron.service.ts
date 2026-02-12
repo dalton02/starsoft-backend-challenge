@@ -7,7 +7,7 @@ import { RabbitQueue } from 'src/utils/types/rabbit';
 import { DataSource } from 'typeorm';
 
 @Injectable()
-export class CustomerCronJobs {
+export class SessionCronService {
   constructor(
     private readonly rabbit: RabbitProvider,
     private readonly dataSource: DataSource,
