@@ -23,4 +23,4 @@ ENV NODE_ENV=test
 
 VOLUME ["/app/coverage"]
 
-CMD ["sh", "-c", "npm run migration:run:prod && npm run test"]
+CMD ["sh", "-c", "npm run migration:run:prod && npm run test -- --verbose"]

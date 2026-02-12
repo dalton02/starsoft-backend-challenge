@@ -2,7 +2,7 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.prod
     depends_on:
       db:
         condition: service_healthy
@@ -27,7 +27,6 @@ services:
       POSTGRES_PASSWORD: postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     restart: unless-stopped
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U postgres']
@@ -38,7 +37,7 @@ services:
       - app-network
 
   rabbitmq:
-    image: rabbitmq:3.13-management-alpine
+    image: heidiks/rabbitmq-delayed-message-exchange:4.2.0-management
     container_name: rabbitmq
     hostname: rabbitmq
     restart: unless-stopped
@@ -48,8 +47,6 @@ services:
       - RABBITMQ_DEFAULT_VHOST=/
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
-      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
-      - ./definitions.json:/etc/rabbitmq/definitions.json:ro
     healthcheck:
       test: ['CMD', 'rabbitmq-diagnostics', 'ping']
       interval: 30s
@@ -63,8 +60,6 @@ services:
     restart: unless-stopped
     volumes:
       - redis_data:/data
-      - ./redis.conf:/usr/local/etc/redis/redis.conf
-    command: redis-server /usr/local/etc/redis/redis.conf
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 10s

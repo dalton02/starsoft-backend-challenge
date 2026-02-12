@@ -27,7 +27,7 @@ export class CustomerSessionController {
   constructor(private readonly service: CustomerSessionService) {}
 
   @Doc({
-    name: 'List reservations history',
+    name: 'List buying history',
     description: 'Shows all seats that haven been buyed by the user',
     response: ReservationModel.ListReservations,
   })

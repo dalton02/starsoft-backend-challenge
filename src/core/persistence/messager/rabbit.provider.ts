@@ -49,6 +49,7 @@ export class RabbitProvider {
         const payload = JSON.parse(msg.content.toString()) as RabbitEvent;
         const retrys = msg.properties.headers['retry-count'] ?? 0;
         try {
+          throw new Error('');
           await fn(payload);
           this.channel.ack(msg);
         } catch (err) {

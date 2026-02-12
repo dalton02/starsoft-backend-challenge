@@ -8,9 +8,13 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { niceEnv } from './utils/functions/env';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerUserAndIpGuard } from './core/auth/guard/throttler.guard';
+import { ScheduleModule } from '@nestjs/schedule';
+
 import { minutesToMilliseconds, secondsToMilliseconds } from 'date-fns';
+
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     ThrottlerModule.forRoot({
       throttlers: [
         {

@@ -14,9 +14,14 @@ import { CustomerServiceUnitMocks } from '../__mocks__/functions.mocks';
 import { CustomerMessagerQueues } from '../messager/customer.provider';
 import { wait } from 'src/utils/functions/time';
 import dataSource from 'src/database.source';
+import { subSeconds } from 'date-fns';
+import { Reservation } from 'src/core/session/entities/reservation.entity';
+import { CustomerCronJobs } from '../cron/customer.cron';
 
+//Testes não envolvem a mensageria em si devido a serem operações assicronas demoradas
 describe('Customer Integration Test', () => {
   let service: CustomerSessionService;
+  let cronJobService: CustomerCronJobs;
   let datasource: DataSource;
 
   async function mock() {
@@ -73,10 +78,12 @@ describe('Customer Integration Test', () => {
         },
         CustomerMessageHandler,
         CustomerMessagerQueues,
+        CustomerCronJobs,
       ],
     }).compile();
     service = module.get(CustomerSessionService);
     datasource = module.get(DataSource);
+    cronJobService = module.get(CustomerCronJobs);
     await module.get(CustomerMessagerQueues).onModuleInit();
   });
 
@@ -96,7 +103,7 @@ describe('Customer Integration Test', () => {
       Array.from({ length: trys }).map(() =>
         service.bookSeat({ seatId, userId: MockCustomer.userOne.id }),
       ),
-    ); //Mensageria é enviada aqui mas eu não preciso testar ela
+    );
 
     const fulfilled = results.filter((r) => r.status === 'fulfilled');
     const rejected = results.filter((r) => r.status === 'rejected');
@@ -122,5 +129,29 @@ describe('Customer Integration Test', () => {
 
     expect(seat.status).toBe(SeatStatus.HOLDING);
     expect(seat.currentReservation.id).toBe(bookId);
+  });
+  it('if messager fails to detect expired reservation after timeout and retrys, application should be able to run a cleanup', async () => {
+    await dataSource.transaction(async (tx) => {
+      const reservation = tx.create(Reservation, {
+        user: { id: MockCustomer.userOne.id },
+        seat: { id: MockCustomer.seat.id },
+        expiresAt: subSeconds(new Date(), 50),
+      });
+
+      await tx.save(reservation);
+
+      await tx.update(
+        Seat,
+        { id: MockCustomer.seat.id },
+        {
+          status: SeatStatus.HOLDING,
+          currentReservation: reservation,
+        },
+      );
+    });
+
+    const countCleanUps = await cronJobService.handle();
+
+    expect(countCleanUps).toBe(1);
   });
 });
