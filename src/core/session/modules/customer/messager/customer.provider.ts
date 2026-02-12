@@ -31,9 +31,16 @@ export class CustomerMessagerQueues {
   }
 
   private async prepareQueues() {
-    await this.rabbit.channel.assertExchange('reservation.events', 'direct', {
-      durable: true,
-    });
+    await this.rabbit.channel.assertExchange(
+      'reservation.events',
+      'x-delayed-message',
+      {
+        durable: true,
+        arguments: {
+          'x-delayed-type': 'direct',
+        },
+      },
+    );
 
     await this.rabbit.channel.assertQueue(RabbitQueue.PAYMENT_CONFIRMED, {
       durable: true,
@@ -66,6 +73,29 @@ export class CustomerMessagerQueues {
       RabbitQueue.RESERVATION_EXPIRED,
       'reservation.events',
       RabbitQueue.RESERVATION_EXPIRED,
+    );
+
+    await this.rabbit.channel.bindQueue(
+      RabbitQueue.RESERVATION_CREATED,
+      'reservation.events',
+      RabbitQueue.RESERVATION_CREATED,
+    );
+    await this.rabbit.channel.bindQueue(
+      RabbitQueue.RESERVATION_DELAY,
+      'reservation.events',
+      RabbitQueue.RESERVATION_DELAY,
+    );
+
+    await this.rabbit.channel.bindQueue(
+      RabbitQueue.PAYMENT_CONFIRMED,
+      'reservation.events',
+      RabbitQueue.PAYMENT_CONFIRMED,
+    );
+
+    await this.rabbit.channel.bindQueue(
+      RabbitQueue.SEAT_RELEASE,
+      'reservation.events',
+      RabbitQueue.SEAT_RELEASE,
     );
   }
 
