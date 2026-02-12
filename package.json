@@ -17,6 +17,8 @@
     "migration:run": "npm run typeorm migration:run",
     "migration:run:prod": "node ./node_modules/typeorm/cli.js migration:run -d dist/database.source.js",
     "migration:revert": "npm run typeorm migration:revert",
+    "docker:prod":"docker compose -f prod.yml up",
+    "docker:test":"docker compose -f test.yml up",
     "dev": "nest start --watch src/main.ts",
     "dev:fast": "bun run --watch src/main.ts",
     "build": "nest build",
