@@ -6,6 +6,7 @@ import {
 } from 'src/utils/types/default.pagination';
 import { SeatStatus } from '../../enums/seat.enum';
 import { ReservationStatus } from '../../enums/reservation.enum';
+import { Transform } from 'class-transformer';
 
 export namespace CustomerModel {
   export namespace Request {
@@ -35,11 +36,12 @@ export namespace CustomerModel {
   }
 
   export namespace Response {
-    export class Booking {
+    export class BookingDto {
       @ApiProperty({})
       bookId: string;
+
       @ApiProperty({})
-      expiresAt: Date;
+      expiresAt: string;
     }
   }
 }

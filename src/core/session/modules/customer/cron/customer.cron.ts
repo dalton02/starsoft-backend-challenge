@@ -13,10 +13,7 @@ export class CustomerCronJobs {
     private readonly dataSource: DataSource,
   ) {}
 
-  onModuleInit() {
-    this.handle();
-  }
-
+  @Cron(CronExpression.EVERY_MINUTE)
   async handle() {
     const result = await this.dataSource.transaction(async (tx) => {
       const data: {

@@ -1,5 +1,6 @@
 import {
   Body,
+  ClassSerializerInterceptor,
   Controller,
   Get,
   Param,
@@ -7,6 +8,7 @@ import {
   Put,
   Query,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { UserRole } from 'src/core/auth/enum/role.enum';
@@ -19,7 +21,8 @@ import { CustomerModel } from './customer.model';
 import { SessionModel } from '../../dto/session.model';
 import { ReservationModel } from '../../dto/reservation.model';
 
-@Controller('customer-session/')
+@Controller('customer/')
+@UseInterceptors(ClassSerializerInterceptor)
 @ApiTags('Session/Customer')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.CUSTOMER)
@@ -59,18 +62,21 @@ export class CustomerSessionController {
 
   @Doc({
     name: 'Book Seat',
-    response: CustomerModel.Response.Booking,
+    response: CustomerModel.Response.BookingDto,
   })
   @Post('/book/:seatId')
-  async bookSeat(@Param('seatId') seatId: string, @UserId() userId: string) {
+  async bookSeat(
+    @Param('seatId') seatId: string,
+    @UserId() userId: string,
+  ): Promise<CustomerModel.Response.BookingDto> {
     return await this.service.bookSeat({ seatId, userId });
   }
 
   @Doc({
     name: 'Pay the reservation',
   })
-  @Put('/pay/:reservationId')
-  async pay(@Param('reservationId') reservationId: string) {
+  @Put('/pay/:bookId')
+  async pay(@Param('bookId') reservationId: string) {
     return await this.service.makePayment({ reservationId });
   }
 }

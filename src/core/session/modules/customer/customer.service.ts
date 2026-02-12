@@ -10,7 +10,7 @@ import {
 import { Reservation } from '../../entities/reservation.entity';
 import { Session } from '../../entities/session.entity';
 import { PaginatedResponseFactory } from 'src/utils/types/default.pagination';
-import { addSeconds } from 'date-fns';
+import { addSeconds, formatDate } from 'date-fns';
 import { RabbitQueue, type EventReservation } from 'src/utils/types/rabbit';
 import { RabbitProvider } from 'src/core/persistence/messager/rabbit.provider';
 import { ReservationStatus } from '../../enums/reservation.enum';
@@ -82,7 +82,7 @@ export class CustomerSessionService {
 
   async bookSeat(
     body: CustomerModel.Request.BookSeat,
-  ): Promise<CustomerModel.Response.Booking> {
+  ): Promise<CustomerModel.Response.BookingDto> {
     const { seatId, userId } = body;
 
     const data = await this.dataSource.transaction(async (entityManager) => {
@@ -132,7 +132,7 @@ export class CustomerSessionService {
 
     return {
       bookId: data.bookId,
-      expiresAt: data.expiresAt,
+      expiresAt: formatDate(data.expiresAt, "dd/MM/yyyy 'ás' hh':'mm':'ss"),
     };
   }
 

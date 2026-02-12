@@ -30,7 +30,7 @@ export class Reservation {
   @CreateDateColumn()
   createdAt: Date;
 
-  @Column({ type: 'timestamp' })
+  @Column({ type: 'timestamp with time zone' })
   expiresAt: Date;
 
   @Column({
