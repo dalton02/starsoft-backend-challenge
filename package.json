@@ -18,7 +18,7 @@
     "docker:test": "docker compose -f test.yml up --build",
     "dev": "nest start --watch src/main.ts",
     "dev:fast": "bun run --watch src/main.ts",
-    "build": "nest build",
+    "build": "npx nest build",
     "build:fast": "bun build --target=bun -e @nestjs/websockets/socket-module -e class-transformer/storage -e @nestjs/microservices --outdir dist src/main.ts ",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",

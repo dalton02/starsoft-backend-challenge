@@ -4,7 +4,7 @@
   "sourceRoot": "src",
   "compilerOptions": {
     "deleteOutDir": true,
-    "assets": ["/integrations/message/email/templates/**/*", "./core/modules/api-doc/markdown/**/*", "./utils/documentation/markdown/**/*", "./core/modules/gateway/modules/smtp/templates/**/*"],
+    "assets": ["./core/modules/api-doc/markdown/**/*", "./utils/documentation/markdown/**/*"],
     "watchAssets": true
   }
 }
