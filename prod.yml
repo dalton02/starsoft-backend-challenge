@@ -1,6 +1,6 @@
 services:
   app:
-    build: 
+    build:
       context: .
       dockerfile: Dockerfile
     depends_on:
@@ -13,10 +13,9 @@ services:
     environment:
       RABBIT_URL: amqp://admin:admin123@rabbitmq:5672/
       DATABASE_URL: postgresql://postgres:postgres@db:5432/appdb
-      REDIS_URL: redis://redis:6379  
-    restart: unless-stopped
+      REDIS_URL: redis://redis:6379
     ports:
-      - "3000:3000"  
+      - '3000:3000'
     networks:
       - app-network
 
@@ -31,7 +30,7 @@ services:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -52,13 +51,13 @@ services:
       - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
       - ./definitions.json:/etc/rabbitmq/definitions.json:ro
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      test: ['CMD', 'rabbitmq-diagnostics', 'ping']
       interval: 30s
       timeout: 10s
       retries: 5
     networks:
       - app-network
-  redis: 
+  redis:
     image: redis:8.4.1-trixie
     container_name: redis
     restart: unless-stopped
@@ -67,7 +66,7 @@ services:
       - ./redis.conf:/usr/local/etc/redis/redis.conf
     command: redis-server /usr/local/etc/redis/redis.conf
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5

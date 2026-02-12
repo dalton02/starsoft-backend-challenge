@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { MemorySessionService } from '../memory-session.service';
 import { DataSource } from 'typeorm';
-import dataSourceProviderTest from 'src/core/persistence/database/relational/database.providers';
 import { RedisService } from 'src/core/persistence/database/redis/redis.service';
 import { mockSession } from '../__mock__/memory.mock';
 import { SeatStatus } from 'src/core/session/enums/seat.enum';
+import dataSource from 'src/database.source';
 
 describe('Memory Concurrency Test', () => {
   let service: MemorySessionService;
@@ -15,7 +15,7 @@ describe('Memory Concurrency Test', () => {
         RedisService,
         {
           provide: DataSource,
-          useValue: dataSourceProviderTest,
+          useValue: dataSource,
         },
       ],
     }).compile();

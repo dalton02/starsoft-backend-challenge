@@ -1,10 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import {
-  DataSource,
-  FindOneOptions,
-  FindOptions,
-  FindOptionsWhere,
-} from 'typeorm';
+import { DataSource, FindOptionsWhere } from 'typeorm';
 import { CustomerModel } from './customer.model';
 import { Seat } from '../../entities/seat.entity';
 import { SeatStatus } from '../../enums/seat.enum';
@@ -16,9 +11,7 @@ import { Reservation } from '../../entities/reservation.entity';
 import { Session } from '../../entities/session.entity';
 import { PaginatedResponseFactory } from 'src/utils/types/default.pagination';
 import { addSeconds } from 'date-fns';
-import { ClientKafka, ClientProxy } from '@nestjs/microservices';
 import { RabbitQueue, type EventReservation } from 'src/utils/types/rabbit';
-import { type Channel } from 'amqplib';
 import { RabbitProvider } from 'src/core/persistence/messager/rabbit.provider';
 import { PaymentStatus } from '../../enums/payment.enum';
 import { SessionModel } from '../../dto/session.model';
@@ -165,21 +158,25 @@ export class CustomerSessionService {
   ): Promise<ReservationModel.ListReservations> {
     const { limit, page } = params;
 
+    const where: FindOptionsWhere<Reservation> = {
+      status: PaymentStatus.APPROVED,
+      user: {
+        id: userId,
+      },
+    };
+
     const [reservations, total] = await Promise.all([
       this.dataSource.getRepository(Reservation).find({
         relations: {
           seat: { session: true },
         },
-        where: {
-          status: PaymentStatus.APPROVED,
-          user: {
-            id: userId,
-          },
-        },
+        where,
         skip: (page - 1) * limit,
         take: limit,
       }),
-      this.dataSource.getRepository(Session).count(),
+      this.dataSource.getRepository(Reservation).count({
+        where,
+      }),
     ]);
 
     const data = reservations.map((data) => {

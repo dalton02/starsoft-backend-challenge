@@ -1,6 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
-import dataSourceProviderTest from 'src/core/persistence/database/relational/database.providers';
 import { RedisService } from 'src/core/persistence/database/redis/redis.service';
 import { SeatStatus } from 'src/core/session/enums/seat.enum';
 import { CustomerSessionService } from '../customer.service';
@@ -14,6 +13,7 @@ import { CustomerMessageHandler } from '../messager/customer.handlers';
 import { CustomerServiceUnitMocks } from '../__mocks__/functions.mocks';
 import { CustomerMessagerQueues } from '../messager/customer.provider';
 import { wait } from 'src/utils/functions/time';
+import dataSource from 'src/database.source';
 
 describe('Customer Integration Test', () => {
   let service: CustomerSessionService;
@@ -57,7 +57,7 @@ describe('Customer Integration Test', () => {
   }
 
   beforeAll(async () => {
-    await dataSourceProviderTest.initialize();
+    await dataSource.initialize();
     const module = await Test.createTestingModule({
       providers: [
         CustomerSessionService,
@@ -69,7 +69,7 @@ describe('Customer Integration Test', () => {
         MemorySessionService,
         {
           provide: DataSource,
-          useValue: dataSourceProviderTest,
+          useValue: dataSource,
         },
         CustomerMessageHandler,
         CustomerMessagerQueues,
@@ -113,7 +113,7 @@ describe('Customer Integration Test', () => {
       userId: MockCustomer.userOne.id,
     });
 
-    const seat = await dataSourceProviderTest.getRepository(Seat).findOne({
+    const seat = await dataSource.getRepository(Seat).findOne({
       where: {
         id: seatId,
       },

@@ -6,6 +6,7 @@ import { User } from 'src/core/auth/entities/user.entity';
 import { Session } from 'src/core/session/entities/session.entity';
 import { Seat } from 'src/core/session/entities/seat.entity';
 import { Reservation } from 'src/core/session/entities/reservation.entity';
+import { join } from 'path';
 
 @Global()
 @Module({
@@ -18,7 +19,7 @@ import { Reservation } from 'src/core/session/entities/reservation.entity';
         url: niceEnv.DATABASE_URL,
         synchronize: false,
         migrationsRun: true,
-        migrations: ['migrations/*{.ts,.js}'],
+        migrations: [join(__dirname, 'migrations/*{.ts,.js}')],
         logging: ['error'],
       }),
     }),

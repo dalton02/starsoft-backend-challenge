@@ -1,3 +1,4 @@
+import { join } from 'path';
 import { User } from 'src/core/auth/entities/user.entity';
 import { Reservation } from 'src/core/session/entities/reservation.entity';
 import { Seat } from 'src/core/session/entities/seat.entity';
@@ -10,7 +11,7 @@ export const dataSourceOptions: DataSourceOptions = {
   url: niceEnv.DATABASE_URL,
   entities: [User, Seat, Session, Reservation],
   synchronize: false,
-  migrations: ['migrations/*{.ts,.js}'],
+  migrations: [join(__dirname, 'migrations/*{.ts,.js}')],
   migrationsRun: true,
   logging: ['error'],
 };

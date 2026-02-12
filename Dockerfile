@@ -5,11 +5,10 @@ WORKDIR /app
 COPY package.json .
 COPY package-lock.json .  
 COPY tsconfig.json .
-COPY migrations migrations
+
+RUN npm ci
 
 COPY . .
-
-RUN npm install
 
 RUN npm run build
 
@@ -21,8 +20,7 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json .
 COPY --from=builder /app/.env .env
-COPY --from=builder /app/migrations ./migrations
 
 EXPOSE 3000
 
-CMD sh -c "node dist/src/main.js"
+CMD ["sh", "-c", "npm run migration:run:prod && node dist/main"]
