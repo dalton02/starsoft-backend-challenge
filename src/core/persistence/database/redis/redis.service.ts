@@ -74,13 +74,6 @@ export class RedisCache<Content, Keys extends Record<string, string | number>> {
         this.expiration,
       );
 
-      this.logger.log(
-        'Updating redis key: ',
-        key,
-        'updated to: ',
-        JSON.stringify(value),
-      );
-
       return [data, null];
     } catch (err) {
       this.logger.error(err);
@@ -94,7 +87,6 @@ export class RedisCache<Content, Keys extends Record<string, string | number>> {
     const data = await this.redis.get(key);
     if (!data) return null;
 
-    this.logger.log('Getting hot data from redis');
     return JSON.parse(data) as Content;
   }
 

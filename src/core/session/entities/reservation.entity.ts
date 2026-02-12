@@ -5,11 +5,13 @@ import {
   CreateDateColumn,
   Entity,
   ManyToOne,
+  OneToOne,
   PrimaryColumn,
   type Relation,
 } from 'typeorm';
 import { Seat } from './seat.entity';
-import { PaymentStatus } from '../enums/payment.enum';
+import { ReservationStatus } from '../enums/reservation.enum';
+import { Sale } from './sale.entity';
 
 @Entity()
 export class Reservation {
@@ -22,15 +24,19 @@ export class Reservation {
   @ManyToOne(() => Seat, (seat) => seat.reservations, { onDelete: 'CASCADE' })
   seat: Relation<Seat>;
 
+  @OneToOne(() => Sale, (sale) => sale.reservation)
+  sale?: Relation<Sale>;
+
   @CreateDateColumn()
   createdAt: Date;
-
-  @Column({ nullable: true, type: 'timestamp' })
-  payedAt: Date;
 
   @Column({ type: 'timestamp' })
   expiresAt: Date;
 
-  @Column({ type: 'enum', enum: PaymentStatus, default: PaymentStatus.PENDING })
-  status: PaymentStatus;
+  @Column({
+    type: 'enum',
+    enum: ReservationStatus,
+    default: ReservationStatus.PENDING,
+  })
+  status: ReservationStatus;
 }

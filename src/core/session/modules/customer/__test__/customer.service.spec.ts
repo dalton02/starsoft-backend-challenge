@@ -8,8 +8,9 @@ import { DataSource } from 'typeorm';
 import { RabbitProvider } from 'src/core/persistence/messager/rabbit.provider';
 import { MemorySessionService } from '../../memory/memory-session.service';
 import { SeatStatus } from 'src/core/session/enums/seat.enum';
-import { PaymentStatus } from 'src/core/session/enums/payment.enum';
+import { ReservationStatus } from 'src/core/session/enums/reservation.enum';
 import { CustomerServiceUnitMocks } from '../__mocks__/functions.mocks';
+import { MockCustomer } from '../__mocks__/customer.mocks';
 
 describe('Unit Test Customer Service', () => {
   let service: CustomerSessionService;
@@ -91,7 +92,7 @@ describe('Unit Test Customer Service', () => {
       session: { id: 's1' },
       currentReservation: {
         id: 'r1',
-        status: PaymentStatus.CANCELLED,
+        status: ReservationStatus.CANCELLED,
       },
     };
 
@@ -111,12 +112,13 @@ describe('Unit Test Customer Service', () => {
       session: { id: 's1' },
       currentReservation: {
         id: 'r1',
-        status: PaymentStatus.PENDING,
+        status: ReservationStatus.PENDING,
       },
     };
 
     CustomerServiceUnitMocks.EntityManager.getRepository.mockReturnValue({
       findOne: jest.fn().mockReturnValue(seat),
+      create: jest.fn().mockReturnValue(MockCustomer.sale),
     });
 
     await service.makePayment({
@@ -124,7 +126,7 @@ describe('Unit Test Customer Service', () => {
     });
 
     expect(seat.status).toBe(SeatStatus.RESERVED);
-    expect(seat.currentReservation.status).toBe(PaymentStatus.APPROVED);
+    expect(seat.currentReservation.status).toBe(ReservationStatus.APPROVED);
     expect(CustomerServiceUnitMocks.Rabbit.publish).toHaveBeenCalled();
   });
 });

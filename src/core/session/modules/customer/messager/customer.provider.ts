@@ -8,7 +8,7 @@ import {
 import { DataSource } from 'typeorm';
 import { Seat } from '../../../entities/seat.entity';
 import { Reservation } from '../../../entities/reservation.entity';
-import { PaymentStatus } from '../../../enums/payment.enum';
+import { ReservationStatus } from '../../../enums/reservation.enum';
 import { SeatStatus } from '../../../enums/seat.enum';
 import { RabbitProvider } from 'src/core/persistence/messager/rabbit.provider';
 import { SessionModel } from '../../../dto/session.model';
@@ -35,7 +35,11 @@ export class CustomerMessagerQueues {
       durable: true,
     });
 
-    await this.rabbit.channel.assertQueue(RabbitQueue.RESERVATION_CONFIRMED, {
+    await this.rabbit.channel.assertQueue(RabbitQueue.PAYMENT_CONFIRMED, {
+      durable: true,
+    });
+
+    await this.rabbit.channel.assertQueue(RabbitQueue.SEAT_RELEASE, {
       durable: true,
     });
 
@@ -67,7 +71,7 @@ export class CustomerMessagerQueues {
 
   private async consumeQueues() {
     await this.rabbit.consume(
-      RabbitQueue.RESERVATION_CONFIRMED,
+      RabbitQueue.PAYMENT_CONFIRMED,
       async (payload) => {
         await this.handler.handleConfirmedReservation(
           payload as EventReservation,
@@ -83,6 +87,10 @@ export class CustomerMessagerQueues {
         );
       },
     );
+
+    await this.rabbit.consume(RabbitQueue.SEAT_RELEASE, async (payload) => {
+      await this.handler.handleSeatRelease(payload as EventReservation);
+    });
 
     await this.rabbit.consume(
       RabbitQueue.RESERVATION_CREATED,

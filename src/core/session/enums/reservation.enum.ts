@@ -1,6 +1,6 @@
 import { CANCELLED } from 'dns';
 
-export enum PaymentStatus {
+export enum ReservationStatus {
   PENDING = 'PENDING',
   APPROVED = 'APPROVED',
   CANCELLED = 'CANCELLED',

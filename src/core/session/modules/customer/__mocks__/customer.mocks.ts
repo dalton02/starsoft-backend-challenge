@@ -1,5 +1,6 @@
 import { User } from 'src/core/auth/entities/user.entity';
 import { UserRole } from 'src/core/auth/enum/role.enum';
+import { Sale } from 'src/core/session/entities/sale.entity';
 import { Seat } from 'src/core/session/entities/seat.entity';
 import { Session } from 'src/core/session/entities/session.entity';
 import { SeatStatus } from 'src/core/session/enums/seat.enum';
@@ -19,6 +20,11 @@ export namespace MockCustomer {
     room: '',
     seats: [seat],
     showtime: new Date(),
+  };
+
+  export const sale = {
+    id: 'sale-123',
+    amount: 123,
   };
 
   export const userOne: User = {

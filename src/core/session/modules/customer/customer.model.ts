@@ -5,7 +5,7 @@ import {
   PaginationDto,
 } from 'src/utils/types/default.pagination';
 import { SeatStatus } from '../../enums/seat.enum';
-import { PaymentStatus } from '../../enums/payment.enum';
+import { ReservationStatus } from '../../enums/reservation.enum';
 
 export namespace CustomerModel {
   export namespace Request {
@@ -31,7 +31,7 @@ export namespace CustomerModel {
 
     export class ListSessionsQuery extends PaginationDto {}
 
-    export class ListReservationsQuery extends PaginationDto {}
+    export class ListSalesQuery extends PaginationDto {}
   }
 
   export namespace Response {

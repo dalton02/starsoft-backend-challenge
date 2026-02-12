@@ -12,7 +12,6 @@ export class ThrottlerUserAndIpGuard extends ThrottlerGuard {
   protected async getTracker(req: Request): Promise<string> {
     const user = req.user as AuthModel.UserContext;
 
-    console.log('tracker');
     if (user?.id) {
       return `user:${user.id}`;
     }

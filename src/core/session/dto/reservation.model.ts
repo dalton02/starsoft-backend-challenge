@@ -1,6 +1,6 @@
 import { User } from 'src/core/auth/entities/user.entity';
 import { Reservation } from '../entities/reservation.entity';
-import { PaymentStatus } from '../enums/payment.enum';
+import { ReservationStatus } from '../enums/reservation.enum';
 import { SessionModel } from './session.model';
 import { PaginatedResponseFactory } from 'src/utils/types/default.pagination';
 import { ApiProperty, OmitType } from '@nestjs/swagger';
@@ -20,14 +20,12 @@ export namespace ReservationModel {
     expiresAt: Date;
     @ApiProperty({})
     id: string;
-    @ApiProperty({})
-    payedAt: Date;
     @ApiProperty({ type: () => SeatFormatted })
     reservedSeat: SeatFormatted;
     @ApiProperty({ type: () => SessionFormatted })
     session: SessionFormatted;
-    @ApiProperty({ enum: PaymentStatus })
-    status: PaymentStatus;
+    @ApiProperty({ enum: ReservationStatus })
+    status: ReservationStatus;
   }
   export class ListReservations extends PaginatedResponseFactory<ReservationDto> {
     @ApiProperty({ type: ReservationDto, isArray: true })

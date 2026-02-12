@@ -33,7 +33,7 @@ export class CustomerSessionController {
   })
   @Get('/list-history')
   async listHistory(
-    @Query() query: CustomerModel.Request.ListReservationsQuery,
+    @Query() query: CustomerModel.Request.ListSalesQuery,
     @UserId() userId: string,
   ) {
     return await this.service.listHistory(query, userId);

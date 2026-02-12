@@ -7,7 +7,7 @@ import {
 import { DataSource } from 'typeorm';
 import { Seat } from '../../../entities/seat.entity';
 import { Reservation } from '../../../entities/reservation.entity';
-import { PaymentStatus } from '../../../enums/payment.enum';
+import { ReservationStatus } from '../../../enums/reservation.enum';
 import { SeatStatus } from '../../../enums/seat.enum';
 import { RabbitProvider } from 'src/core/persistence/messager/rabbit.provider';
 import { MemorySessionService } from '../../memory/memory-session.service';
@@ -44,6 +44,23 @@ export class CustomerMessageHandler {
     });
   }
 
+  async handleSeatRelease(params: EventReservation) {
+    const { reservationId, seatId, sessionId } = params;
+
+    console.log('-----------------------------------------------\n\n');
+    console.log('LIBERANDO ASSENTO PARA OUTRAS PESSOAS COMPRAREM');
+    console.log('\n\n-----------------------------------------------');
+
+    await this.memory.updateSeat({
+      sessionId,
+      seatId,
+      seat: {
+        currentReservationId: null,
+        status: SeatStatus.AVAILABLE,
+      },
+    });
+  }
+
   async handleExpiredReservation(params: EventReservation) {
     const { reservationId, seatId, sessionId } = params;
 
@@ -66,11 +83,11 @@ export class CustomerMessageHandler {
           where: { id: reservationId },
         });
 
-        if (reservation.status !== PaymentStatus.PENDING) {
+        if (reservation.status !== ReservationStatus.PENDING) {
           return { reservation, seat };
         }
 
-        reservation.status = PaymentStatus.CANCELLED;
+        reservation.status = ReservationStatus.CANCELLED;
         seat.status = SeatStatus.AVAILABLE;
         seat.currentReservation = null;
 
@@ -78,13 +95,16 @@ export class CustomerMessageHandler {
         return { reservation, seat };
       },
     );
-    await this.memory.updateSeat({
-      sessionId,
-      seatId: seat.id,
-      seat: {
-        currentReservationId: seat.currentReservation?.id ?? null,
-      },
-    });
+
+    if (reservation.status === ReservationStatus.APPROVED) {
+      console.log('-----------------------------------------------\n\n');
+      console.log('SUA RESERVA ESTÁ CONFIRMADA AQUI, PARABÉNS');
+      console.log('\n\n-----------------------------------------------');
+    }
+
+    if (reservation.status === ReservationStatus.CANCELLED) {
+      await this.rabbit.publish(RabbitQueue.SEAT_RELEASE, params);
+    }
   }
 
   async reservationCreated(payload: EventReservation) {
@@ -99,21 +119,21 @@ export class CustomerMessageHandler {
 
     let session = await this.memory.CACHE_SESSION.get({ sessionId });
     if (!session) {
-      await this.memory.reloadSessionFromDB(sessionId); //Já que vai atualizar direto pelo banco, não tem necessidade do resto
-      return;
+      await this.memory.reloadSessionFromDB(sessionId);
+    } else {
+      const seatReserved = session.seats.find((seat) => seat.id === seatId);
+
+      if (!seatReserved) {
+        throw new Error('Seat does not exist');
+      }
+
+      await this.memory.updateSeat({
+        sessionId,
+        seatId: seatReserved.id,
+        seat: { status: SeatStatus.HOLDING },
+      });
     }
 
-    const seatReserved = session.seats.find((seat) => seat.id === seatId);
-
-    if (!seatReserved) {
-      throw new Error('Seat does not exist');
-    }
-
-    await this.memory.updateSeat({
-      sessionId,
-      seatId: seatReserved.id,
-      seat: { status: SeatStatus.HOLDING },
-    });
     await this.rabbit.publish(RabbitQueue.RESERVATION_DELAY, payload);
   }
 }

@@ -13,12 +13,14 @@ import { PaginatedResponseFactory } from 'src/utils/types/default.pagination';
 import { addSeconds } from 'date-fns';
 import { RabbitQueue, type EventReservation } from 'src/utils/types/rabbit';
 import { RabbitProvider } from 'src/core/persistence/messager/rabbit.provider';
-import { PaymentStatus } from '../../enums/payment.enum';
+import { ReservationStatus } from '../../enums/reservation.enum';
 import { SessionModel } from '../../dto/session.model';
 import { MemorySessionService } from '../memory/memory-session.service';
 import { ReservationModel } from '../../dto/reservation.model';
 import { formatSession } from 'src/utils/functions/format-session';
 import { niceEnv } from 'src/utils/functions/env';
+import { Sale } from '../../entities/sale.entity';
+import { SaleModel } from '../../dto/sale.model';
 @Injectable()
 export class CustomerSessionService {
   constructor(
@@ -51,15 +53,19 @@ export class CustomerSessionService {
           throw new AppErrorNotFound('Reserva não foi encontrada');
         }
 
-        if (seat.currentReservation.status != PaymentStatus.PENDING) {
+        if (seat.currentReservation.status != ReservationStatus.PENDING) {
           throw new AppErrorBadRequest('Reserva não está mais pendente');
         }
 
-        seat.currentReservation.status = PaymentStatus.APPROVED;
-        seat.currentReservation.payedAt = new Date();
+        seat.currentReservation.status = ReservationStatus.APPROVED;
         seat.status = SeatStatus.RESERVED;
 
-        await entityManager.save([seat.currentReservation, seat]);
+        const sale = entityManager.getRepository(Sale).create({
+          amount: seat.session.price,
+          reservation: { id: reservationId },
+        });
+
+        await entityManager.save([seat.currentReservation, seat, sale]);
         return {
           reservation: seat.currentReservation,
           seat: seat,
@@ -67,7 +73,7 @@ export class CustomerSessionService {
         };
       },
     );
-    await this.rabbit.publish(RabbitQueue.RESERVATION_CONFIRMED, {
+    await this.rabbit.publish(RabbitQueue.PAYMENT_CONFIRMED, {
       reservationId,
       seatId: seat.id,
       sessionId: session.id,
@@ -79,7 +85,7 @@ export class CustomerSessionService {
   ): Promise<CustomerModel.Response.Booking> {
     const { seatId, userId } = body;
 
-    return await this.dataSource.transaction(async (entityManager) => {
+    const data = await this.dataSource.transaction(async (entityManager) => {
       const seat = await entityManager.findOne(Seat, {
         where: { id: seatId },
         relations: {
@@ -109,19 +115,25 @@ export class CustomerSessionService {
 
       await entityManager.save([reservation, seat]);
 
-      const payload: EventReservation = {
-        seatId,
-        reservationId: reservation.id,
-        sessionId: seat.session.id,
-      };
-
-      this.rabbit.publish(RabbitQueue.RESERVATION_CREATED, payload);
-
       return {
         bookId: reservation.id,
         expiresAt: reservation.expiresAt,
+        sessionId: seat.session.id,
       };
     });
+
+    const payload: EventReservation = {
+      seatId,
+      reservationId: data.bookId,
+      sessionId: data.sessionId,
+    };
+
+    await this.rabbit.publish(RabbitQueue.RESERVATION_CREATED, payload);
+
+    return {
+      bookId: data.bookId,
+      expiresAt: data.expiresAt,
+    };
   }
 
   async getSession(
@@ -153,38 +165,41 @@ export class CustomerSessionService {
   }
 
   async listHistory(
-    params: CustomerModel.Request.ListReservationsQuery,
+    params: CustomerModel.Request.ListSalesQuery,
     userId: string,
-  ): Promise<ReservationModel.ListReservations> {
+  ): Promise<SaleModel.ListSales> {
     const { limit, page } = params;
 
-    const where: FindOptionsWhere<Reservation> = {
-      status: PaymentStatus.APPROVED,
-      user: {
-        id: userId,
+    const where: FindOptionsWhere<Sale> = {
+      reservation: {
+        user: {
+          id: userId,
+        },
       },
     };
 
-    const [reservations, total] = await Promise.all([
-      this.dataSource.getRepository(Reservation).find({
+    const [sales, total] = await Promise.all([
+      this.dataSource.getRepository(Sale).find({
         relations: {
-          seat: { session: true },
+          reservation: {
+            seat: { session: true },
+          },
         },
         where,
         skip: (page - 1) * limit,
         take: limit,
       }),
-      this.dataSource.getRepository(Reservation).count({
+      this.dataSource.getRepository(Sale).count({
         where,
       }),
     ]);
 
-    const data = reservations.map((data) => {
-      const { seat, ...reservation } = data;
+    const data = sales.map((data) => {
+      const { reservation, ...saleInfo } = data;
+      const { seat } = reservation;
       const { session, ...reservedSeat } = seat;
-
       return {
-        ...reservation,
+        ...saleInfo,
         reservedSeat,
         session,
       };
