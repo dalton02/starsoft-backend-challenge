@@ -19,12 +19,11 @@ import { CustomerSessionService } from './customer.service';
 import { UserId } from 'src/utils/decorators/user-id.decorator';
 import { CustomerModel } from './customer.model';
 import { SessionModel } from '../../dto/session.model';
-import { ReservationModel } from '../../dto/reservation.model';
 import { Throttle } from '@nestjs/throttler';
 import { hoursToMilliseconds, minutesToMilliseconds } from 'date-fns';
+import { SaleModel } from '../../dto/sale.model';
 
 @Controller('customer/')
-@UseInterceptors(ClassSerializerInterceptor)
 @ApiTags('Session/Customer')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.CUSTOMER)
@@ -34,7 +33,7 @@ export class CustomerSessionController {
   @Doc({
     name: 'List buying history',
     description: 'Shows all seats that haven been buyed by the user',
-    response: ReservationModel.ListReservations,
+    response: SaleModel.ListSales,
   })
   @Get('/list-history')
   async listHistory(

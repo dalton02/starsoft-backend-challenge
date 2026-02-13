@@ -10,12 +10,6 @@ import { AuthModel } from '../auth.model';
 @Injectable()
 export class ThrottlerUserAndIpGuard extends ThrottlerGuard {
   protected async getTracker(req: Request): Promise<string> {
-    const user = req.user as AuthModel.UserContext;
-    if (user?.id) {
-      console.log('user: ', user.id);
-      return `user:${user.id}`;
-    }
-
     return `ip:${req.ip}`;
   }
 }
