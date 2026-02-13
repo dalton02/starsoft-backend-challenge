@@ -1,6 +1,6 @@
 {
-  "name": "StarSoft Challenge",
-  "version": "0.0.1",
+  "name": "star-soft-challenge",
+  "version": "1.0.0",
   "description": "",
   "author": "Dalton Gomes Lobato",
   "private": true,
@@ -15,7 +15,6 @@
     "migration:run:prod": "node ./node_modules/typeorm/cli.js migration:run -d dist/database.source.js",
     "migration:revert": "npm run typeorm migration:revert",
     "docker:cleanup": "docker compose -f prod.yml down -v & docker compose -f test.yml down -v",
-
     "docker:prod": "docker compose -f prod.yml up --build",
     "docker:test": "docker compose -f test.yml up --build",
     "dev": "nest start --watch src/main.ts",

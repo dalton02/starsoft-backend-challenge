@@ -42,7 +42,6 @@ lerna-debug.log*
 .env.production.local
 .env.local
 /openapi.json
-
 # temp directory
 .temp
 .tmp
@@ -57,3 +56,4 @@ pids
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 /generated/prisma
+rabbit-local.yml
