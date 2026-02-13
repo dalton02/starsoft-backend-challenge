@@ -23,22 +23,13 @@ export class SessionMessageHandler {
   async handleConfirmedReservation(params: EventReservation) {
     const { reservationId, seatId, sessionId } = params;
 
-    let session = await this.memory.CACHE_SESSION.get({ sessionId });
-
-    if (!session) {
-      await this.memory.reloadSessionFromDB(sessionId);
-      return;
-    }
-
-    const seatReserved = session.seats.find((seat) => seat.id === seatId);
-
-    if (!seatReserved) {
-      throw new Error('Seat does not exist');
-    }
+    console.log('-----------------------------------------------\n\n');
+    console.log('YOUR RESERVATION IS VALID!!!');
+    console.log('\n\n-----------------------------------------------');
 
     await this.memory.updateSeat({
       sessionId,
-      seatId: seatReserved.id,
+      seatId: seatId,
       seat: { status: SeatStatus.RESERVED },
     });
   }
@@ -60,7 +51,7 @@ export class SessionMessageHandler {
     });
   }
 
-  async handleExpiredReservation(params: EventReservation) {
+  async handleTimeoutReservation(params: EventReservation) {
     const { reservationId, seatId, sessionId } = params;
 
     console.log('-----------------------------------------------\n\n');
@@ -95,12 +86,6 @@ export class SessionMessageHandler {
       },
     );
 
-    if (reservation.status === ReservationStatus.APPROVED) {
-      console.log('-----------------------------------------------\n\n');
-      console.log('YOUR RESERVATION IS VALID!!!');
-      console.log('\n\n-----------------------------------------------');
-    }
-
     if (reservation.status === ReservationStatus.CANCELLED) {
       await this.rabbit.publish(
         RabbitExchange.RESERVATION_EVENTS,
@@ -110,7 +95,7 @@ export class SessionMessageHandler {
     }
   }
 
-  async reservationCreated(payload: EventReservation) {
+  async handleReservationCreated(payload: EventReservation) {
     const { reservationId, seatId, sessionId } = payload;
 
     console.log('-----------------------------------------------\n\n');
@@ -119,22 +104,11 @@ export class SessionMessageHandler {
     );
     console.log('\n\n-----------------------------------------------');
 
-    let session = await this.memory.CACHE_SESSION.get({ sessionId });
-    if (!session) {
-      await this.memory.reloadSessionFromDB(sessionId);
-    } else {
-      const seatReserved = session.seats.find((seat) => seat.id === seatId);
-
-      if (!seatReserved) {
-        throw new Error('Seat does not exist');
-      }
-
-      await this.memory.updateSeat({
-        sessionId,
-        seatId: seatReserved.id,
-        seat: { status: SeatStatus.HOLDING },
-      });
-    }
+    await this.memory.updateSeat({
+      sessionId,
+      seatId: seatId,
+      seat: { status: SeatStatus.HOLDING },
+    });
 
     await this.rabbit.publish(
       RabbitExchange.RESERVATION_EVENTS,

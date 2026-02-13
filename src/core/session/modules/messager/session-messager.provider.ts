@@ -106,7 +106,7 @@ export class SessionMessagerQueues {
     await this.rabbit.consume(
       RabbitQueue.RESERVATION_EXPIRED,
       async (payload) => {
-        await this.handler.handleExpiredReservation(
+        await this.handler.handleTimeoutReservation(
           payload as EventReservation,
         );
       },
@@ -119,7 +119,9 @@ export class SessionMessagerQueues {
     await this.rabbit.consume(
       RabbitQueue.RESERVATION_CREATED,
       async (payload) => {
-        await this.handler.reservationCreated(payload as EventReservation);
+        await this.handler.handleReservationCreated(
+          payload as EventReservation,
+        );
       },
     );
   }

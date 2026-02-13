@@ -55,7 +55,7 @@ export class MemorySessionService {
     return formattedSession;
   }
 
-  generateLockKey(sessionId: string) {
+  private generateLockKey(sessionId: string) {
     return `lock-session:${sessionId}`;
   }
 
@@ -116,13 +116,15 @@ export class MemorySessionService {
       let cachedSession = await this.CACHE_SESSION.get({ sessionId });
 
       if (!cachedSession) {
-        cachedSession = await this.getSessionFromDB(sessionId);
+        throw new Error('Sessão não encontrada em cache');
       }
 
       const seatIndex = cachedSession.seats.findIndex((s) => s.id === seatId);
 
+      //Idealmente isso nunca ocorreria, mas....
       if (seatIndex === -1) {
-        return;
+        await this.invalidateKey(sessionId);
+        throw new Error('Algo de errado com os assentos');
       }
 
       cachedSession.seats[seatIndex] = {
