@@ -13,7 +13,7 @@ export class SessionCronService {
     private readonly dataSource: DataSource,
   ) {}
 
-  @Cron(CronExpression.EVERY_MINUTE)
+  @Cron(CronExpression.EVERY_10_MINUTES)
   async handle() {
     const result = await this.dataSource.transaction(async (tx) => {
       const data: {

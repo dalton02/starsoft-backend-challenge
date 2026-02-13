@@ -1,6 +1,3 @@
-starsoft.readme
-starsoft.readme
-
 ## 1. Visão Geral
 
 A solução apresentada implementa um sistema de venda de ingressos projetado para operar com múltiplas instâncias da aplicação simultaneamente, evitando race conditions e a venda duplicada de um mesmo assento.
@@ -159,7 +156,7 @@ Após a reserva, o sistema concede uma janela de **30 segundos** para confirmaç
 Utilize o `bookID` retornado na reserva:
 
 ```
-PUT /customer/pay/{reservationId}
+PUT /customer/pay/{bookId}
 ```
 
 #### 7. Consultar histórico de compras
@@ -223,6 +220,8 @@ Embora o Redis seja comum para dados temporários devido à sua performance, ele
 O RabbitMQ é utilizado para sinalizar expirações: ao criar uma reserva, uma mensagem com delay de 30 (como foi definido no escopo do projeto) é enfileirada; um consumer processa a liberação atomicamente no banco, garantindo idempotência e publicação de eventos.
 
 Nesse modelo, o Redis atua apenas como camada complementar de cache para consultas de disponibilidade, enquanto o PostgreSQL permanece como a fonte única de verdade. Essa abordagem proporciona maior robustez, previsibilidade e alinhamento com princípios SOLID em ambientes distribuídos, priorizando consistência sobre latência pura.
+
+Outra decisão foi adicionar um CronJOB para processamento em batch de reservas expiradas que não foram resolvidas. No cenário hipotético em que a mensageria tenha falhado completamente em processar as mensagens de expiração de reserva (idealmente nunca aconteceria principalmente com a implementação com retrys exponenciais), foi colocado um serviço de clean up que seleciona todos os assentos que não estão sendo processados por nenhuma transação, aplicando um lock em cada um deles, e fazendo o processamento manual de liberar a reserva e assentos que não tiveram o pagamento processado.
 
 ### 7. O que ficou faltando
 
