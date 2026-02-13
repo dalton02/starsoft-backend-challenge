@@ -43,12 +43,6 @@ export class RabbitProvider {
       console.log('MENSAGEM FALHOU MESMO APOS RETRYS COM BACKOFF EXPONENCIAL');
       this.channel.ack(msg);
     });
-
-    await this.publish('RESERVATION.EVENTS', 'PAYMENT.CONFIRMED', {
-      reservationId: '',
-      seatId: '',
-      sessionId: '',
-    });
   }
 
   async publish(

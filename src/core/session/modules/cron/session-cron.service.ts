@@ -48,7 +48,7 @@ export class SessionCronService {
     });
 
     result.forEach((seat) => {
-      this.rabbit.publish(RabbitQueue.SEAT_RELEASE, {
+      this.rabbit.publish('RESERVATION.EVENTS', 'SEAT.RELEASE', {
         reservationId: seat.reservationId,
         seatId: seat.id,
         sessionId: seat.sessionId,
